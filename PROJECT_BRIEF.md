@@ -20,9 +20,11 @@ GHP-Index is a web application that aggregates and displays statistics from the 
 - [x] TypeScript setup complete
 - [x] Basic project structure in place
 - [x] NBA dashboard skeleton (header, nav, main layout)
+- [x] Python backend setup (FastAPI + nba_api)
+- [x] /api/teams endpoint returning all NBA teams
 
 ### 🚧 In Progress
-- [ ] NBA landing page / dashboard (basic structure done, needs content)
+- [ ] Connect frontend to backend (fetch teams and display)
 
 ### ❌ Not Started
 **NBA First Approach** - Building out NBA fully before adding other leagues
@@ -50,14 +52,16 @@ GHP-Index is a web application that aggregates and displays statistics from the 
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Frontend | Next.js 16, React 19, TypeScript |
-| Styling | Tailwind CSS 4 |
-| Backend | TBD (likely Next.js API routes) |
-| Data Scraping | TBD (Puppeteer, Cheerio, or sports APIs) |
-| Database | TBD |
-| AI Features | TBD (OpenAI API, local models, etc.) |
+| Layer | Technology | Purpose |
+|-------|------------|---------|
+| **UI Library** | React 19 | Building components, managing UI state |
+| **Language** | TypeScript | JavaScript with types (`.tsx` files) |
+| **Framework** | Next.js 16 | Routing, server features, project structure |
+| **Styling** | Tailwind CSS 4 | Utility-first CSS classes |
+| **Backend** | FastAPI (Python) | REST API serving NBA data |
+| **Data Source** | nba_api | Python library for official NBA stats |
+| Database | TBD | |
+| AI Features | TBD (OpenAI API, local models, etc.) | |
 
 ---
 
@@ -157,6 +161,7 @@ Use this section to track major changes across sessions:
 | Jan 29, 2026 | Initial | Project scaffolded, PROJECT_BRIEF.md created |
 | Jan 29, 2026 | Session 1 | Updated roadmap to NBA-first approach |
 | Jan 29, 2026 | Session 1 | Created NBA dashboard skeleton in page.tsx (header, nav, main) |
+| Jan 29, 2026 | Session 1 | Set up Python backend with FastAPI, created /api/teams endpoint |
 
 ---
 
