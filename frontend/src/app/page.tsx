@@ -8,11 +8,11 @@ export default function Home() {
 
       {/* Navigation */}
       <nav className="flex gap-4 p-4 border-b border-zinc-800">
-        <a href="/games" className="hover:text-orange-500">NBA</a>
-        <a href="/games" className="hover:text-orange-500">NFL</a>
-        <a href="/games" className="hover:text-orange-500">MLB</a>
-        <a href="/games" className="hover:text-orange-500">NHL</a> 
-        <a href="/games" className="hover:text-orange-500">Players</a> 
+        <a href="/nba" className="hover:text-orange-500">NBA</a>
+        <a href="/nfl" className="hover:text-orange-500">NFL</a>
+        <a href="/mlb" className="hover:text-orange-500">MLB</a>
+        <a href="/nhl" className="hover:text-orange-500">NHL</a> 
+        <a href="/players" className="hover:text-orange-500">Players</a> 
       </nav>
 
       {/* Main content area */}

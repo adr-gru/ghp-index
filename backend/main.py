@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from nba_api.stats.static import teams
+from nba_api.stats.static import teams, players
 
 # Create the FastAPI app
 app = FastAPI()
@@ -18,3 +18,8 @@ app.add_middleware(
 def get_teams():
     nba_teams = teams.get_teams()
     return nba_teams
+
+@app.get("/api/players")
+def get_players():
+    nba_players = players.get_players()
+    return nba_players
