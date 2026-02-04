@@ -65,7 +65,7 @@ GHP-Index is a web application that aggregates and displays statistics from the 
 | **Framework** | Next.js 16 | Routing, server features, project structure |
 | **Styling** | Tailwind CSS 4 | Utility-first CSS classes |
 | **Backend** | FastAPI (Python) | REST API serving NBA data |
-| **Data Source** | nba_api | Python library for official NBA stats |
+| **Data Source** | [nba_api](https://github.com/swar/nba_api) | Python library for official NBA stats |
 | Database | TBD | |
 | AI Features | TBD (OpenAI API, local models, etc.) | |
 

@@ -18,7 +18,7 @@ export default async function NflPage() {
 
       {/* Main content area */}
        <main className="p-6">
-        <h1 className="text-xl mb-4">Teams</h1>
+        <h1 className="text-xl mb-4">Coming soon...</h1>
         <div className="grid grid-cols-3 gap-4">
            
         </div>

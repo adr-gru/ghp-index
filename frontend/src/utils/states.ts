@@ -1,0 +1,36 @@
+// Map NBA cities to state abbreviations
+const cityToState: Record<string, string> = {
+  "Atlanta": "GA",
+  "Boston": "MA",
+  "Brooklyn": "NY",
+  "Charlotte": "NC",
+  "Chicago": "IL",
+  "Cleveland": "OH",
+  "Dallas": "TX",
+  "Denver": "CO",
+  "Detroit": "MI",
+  "Golden State": "CA",
+  "Houston": "TX",
+  "Indiana": "IN",
+  "Los Angeles": "CA",
+  "Memphis": "TN",
+  "Miami": "FL",
+  "Milwaukee": "WI",
+  "Minnesota": "MN",
+  "New Orleans": "LA",
+  "New York": "NY",
+  "Oklahoma City": "OK",
+  "Orlando": "FL",
+  "Philadelphia": "PA",
+  "Phoenix": "AZ",
+  "Portland": "OR",
+  "Sacramento": "CA",
+  "San Antonio": "TX",
+  "Toronto": "ON",  // Canada
+  "Utah": "UT",
+  "Washington": "DC",
+};
+
+export function findStateAbr(city: string): string {
+  return cityToState[city] || "??";
+}

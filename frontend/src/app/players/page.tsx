@@ -2,7 +2,7 @@ import TeamCard from "@/components/TeamCard";
 import NavBar from "@/components/NavBar";
 import Header from "@/components/Header";
 
-export default async function NhlPage() {
+export default async function PlayersPage() {
 
   //const response = await fetch("http://localhost:8000/api/teams");
   //const teams = await response.json();

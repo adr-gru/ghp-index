@@ -1,4 +1,5 @@
 import NavBar from "@/components/NavBar";
+import Header from "@/components/Header";
 
 interface TeamPageProps {
   params: Promise<{
@@ -12,16 +13,18 @@ export default async function TeamPage({ params }: TeamPageProps) {
   // Use the teamId in the URL to fetch that specific team
   const response = await fetch(`http://localhost:8000/api/teams/${teamId}`);
   const team = await response.json();
+  const city = team.info.resultSets[0].rowSet[0][2];
+  const teamName = team.info.resultSets[0].rowSet[0][3];
+  const teamAbr = team.info.resultSets[0].rowSet[0][4];
+  const conference = team.info.resultSets[0].rowSet[0][5];
 
   return (
     <div>
-      <header className="p-6 border-b border-zinc-800">
-        <h1 className="text-2xl font-bold">GHP-Index</h1>
-      </header>
+      <Header />
  
       <NavBar />
 
-      <h1>Team: {team.info.resultSets[0].rowSet[0][2]} {team.info.resultSets[0].rowSet[0][3]} {team.info.resultSets[0].rowSet[0][4]} {team.info.resultSets[0].rowSet[0][5]}
+      <h1>whatss: {city} {teamName} {teamAbr} {conference}
       </h1>
     </div>
   );
