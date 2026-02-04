@@ -2,6 +2,10 @@ import TeamCard from "@/components/TeamCard";
 import NavBar from "@/components/NavBar";
 import Header from "@/components/Header";
 
+export const metadata = {
+  title: "NFL Teams | GHP-Index",
+};
+
 export default async function NflPage() {
 
   //const response = await fetch("http://localhost:8000/api/teams");

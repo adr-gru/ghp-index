@@ -2,6 +2,10 @@ import TeamCard from "@/components/TeamCard";
 import NavBar from "@/components/NavBar";
 import Header from "@/components/Header";
 
+export const metadata = {
+  title: "NBA Teams | GHP-Index",
+};
+
 export default async function NbaPage() {
 
   const response = await fetch("http://localhost:8000/api/teams");
@@ -11,7 +15,6 @@ export default async function NbaPage() {
     <div>
       <Header />
       <NavBar />
-
 
       {/* Main content area */}
        <main className="p-6">

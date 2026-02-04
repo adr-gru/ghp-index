@@ -1,4 +1,19 @@
 import NavBar from "@/components/NavBar";
+import Header from "@/components/Header";
+
+// Dynamic metadata - fetches team name for the title
+export async function generateMetadata({ params }: TeamPageProps) {
+  const { teamId } = await params;
+  const response = await fetch(`http://localhost:8000/api/teams/${teamId}`);
+  const team = await response.json();
+  
+  const city = team.info.resultSets[0].rowSet[0][2];
+  const name = team.info.resultSets[0].rowSet[0][3];
+  
+  return {
+    title: `${city} ${name} | GHP-Index`,
+  };
+}
 
 interface TeamPageProps {
   params: Promise<{
@@ -12,12 +27,9 @@ export default async function TeamPage({ params }: TeamPageProps) {
   // Use the teamId in the URL to fetch that specific team
   const response = await fetch(`http://localhost:8000/api/teams/${teamId}`);
   const team = await response.json();
-
   return (
     <div>
-      <header className="p-6 border-b border-zinc-800">
-        <h1 className="text-2xl font-bold">GHP-Index</h1>
-      </header>
+      <Header />
  
       <NavBar />
 

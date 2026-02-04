@@ -2,6 +2,10 @@ import NavBar from "@/components/NavBar";
 import Header from "@/components/Header";
 import Link from "next/link";
 
+export const metadata = {
+  title: "Homepage | GHP-Index",
+};
+
 export default function Home() {
   return (
     <div className="min-h-screen bg-black text-white">
