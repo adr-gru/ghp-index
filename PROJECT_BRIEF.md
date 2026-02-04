@@ -1,6 +1,6 @@
 # GHP-Index: Sports Statistics Web Application
 
-> **Last Updated:** January 29, 2026  
+> **Last Updated:** February 4, 2026  
 > **Project Owner:** Adrian G. (4th Year CS Student)  
 > **Purpose:** Portfolio project + skill development
 
@@ -22,9 +22,15 @@ GHP-Index is a web application that aggregates and displays statistics from the 
 - [x] NBA dashboard skeleton (header, nav, main layout)
 - [x] Python backend setup (FastAPI + nba_api)
 - [x] /api/teams endpoint returning all NBA teams
+- [x] /api/teams/{team_id} endpoint for specific team info + roster
+- [x] Reusable components created (Header, NavBar, TeamCard)
+- [x] Dynamic routing for team pages (`[teamId]`)
+- [x] Frontend connected to backend (NBA teams displaying)
+- [x] League pages scaffolded (NBA, NFL, MLB, NHL)
 
 ### 🚧 In Progress
-- [ ] Connect frontend to backend (fetch teams and display)
+- [ ] Style and enhance team detail pages
+- [ ] Display roster data on team pages
 
 ### ❌ Not Started
 **NBA First Approach** - Building out NBA fully before adding other leagues
@@ -162,6 +168,12 @@ Use this section to track major changes across sessions:
 | Jan 29, 2026 | Session 1 | Updated roadmap to NBA-first approach |
 | Jan 29, 2026 | Session 1 | Created NBA dashboard skeleton in page.tsx (header, nav, main) |
 | Jan 29, 2026 | Session 1 | Set up Python backend with FastAPI, created /api/teams endpoint |
+| Feb 4, 2026 | Session 2 | Created reusable components: Header, NavBar, TeamCard |
+| Feb 4, 2026 | Session 2 | Implemented dynamic routing with `[teamId]` for team pages |
+| Feb 4, 2026 | Session 2 | Added `/api/teams/{team_id}` backend endpoint (team info + roster) |
+| Feb 4, 2026 | Session 2 | Connected frontend to backend - NBA teams now display with TeamCard |
+| Feb 4, 2026 | Session 2 | Scaffolded all league pages (NFL, MLB, NHL) with same structure |
+| Feb 4, 2026 | Session 2 | Used Next.js Link component for client-side navigation |
 
 ---
 
