@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from nba_api.stats.static import teams, players
-from nba_api.stats.endpoints import teaminfocommon, commonteamroster
+from nba_api.stats.endpoints import teaminfocommon, commonteamroster, commonplayerinfo
 
 # Create the FastAPI app
 app = FastAPI()
@@ -37,4 +37,12 @@ def get_team(team_id: int):
     return {
         "info": team_info.get_dict(),
         "roster": roster.get_dict()
+    }
+
+# Get a specific player by player ID
+@app.get("/api/commonplayerinfo")
+def get_player(player_id: int):
+      player_info = commonplayerinfo.CommonPlayerInfo(player_id=player_id) 
+      return {
+        "info": player_info.get_dict()
     }

@@ -19,7 +19,7 @@ export default async function NbaPage() {
       {/* Main content area */}
        <main className="p-6">
         <h1 className="text-xl mb-4">Teams</h1>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           {teams.map((team) => (
             <TeamCard
               key={team.id}
