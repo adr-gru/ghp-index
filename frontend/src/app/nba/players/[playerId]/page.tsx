@@ -1,5 +1,3 @@
-import NavBar from "@/components/NavBar";
-import Header from "@/components/Header";
 import Image from "next/image";
 import { findStateAbr } from "@/utils/states";
 
@@ -41,10 +39,6 @@ export default async function PlayerPage({ params }: PlayerPageProps) {
 
   return (
     <div>
-      <Header />
-
-      <NavBar />
-
       <div className="flex">
         <div className="relative w-110 h-90">
           <Image

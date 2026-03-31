@@ -1,5 +1,3 @@
-import NavBar from "@/components/NavBar";
-import Header from "@/components/Header";
 import Image from "next/image";
 import { findStateAbr } from "@/utils/states";
 import PlayerCard from "@/components/PlayerCard";
@@ -39,10 +37,6 @@ export default async function TeamPage({ params }: TeamPageProps) {
 
   return (
     <div>
-      <Header />
-
-      <NavBar />
-
       <div className="flex pt-4 pl-4">
         <div className="relative w-100 h-100">
           <Image

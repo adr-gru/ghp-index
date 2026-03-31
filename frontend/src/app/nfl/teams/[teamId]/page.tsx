@@ -19,10 +19,7 @@ export default async function TeamPage({ params }: TeamPageProps) {
   const conference = team.info.resultSets[0].rowSet[0][5];
 
   return (
-    <div>
-      <Header />
- 
-      <NavBar />
+    <div> 
 
       <h1>whatss: {city} {teamName} {teamAbr} {conference}
       </h1>

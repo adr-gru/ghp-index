@@ -8,9 +8,7 @@ export default async function NhlPage() {
   //const teams = await response.json();
 
   return (
-    <div>
-      <Header />
-      <NavBar />
+    <div> 
 
 
       {/* Main content area */}

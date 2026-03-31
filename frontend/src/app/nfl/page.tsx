@@ -12,9 +12,7 @@ export default async function NflPage() {
   //const teams = await response.json();
 
   return (
-    <div>
-      <Header />
-      <NavBar />
+    <div> 
 
       {/* Main content area */}
        <main className="p-6">

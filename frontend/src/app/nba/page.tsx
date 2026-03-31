@@ -1,6 +1,4 @@
 import TeamCard from "@/components/TeamCard";
-import NavBar from "@/components/NavBar";
-import Header from "@/components/Header";
 
 export const metadata = {
   title: "NBA Teams | GHP-Index",
@@ -13,9 +11,6 @@ export default async function NbaPage() {
 
   return (
     <div>
-      <Header />
-      <NavBar />
-
       {/* Main content area */}
        <main className="p-6">
         <h1 className="text-xl mb-4">Teams</h1>

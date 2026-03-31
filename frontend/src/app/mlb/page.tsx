@@ -8,10 +8,7 @@ export default async function MlbPage() {
   //const teams = await response.json();
 
   return (
-    <div>
-      <Header />
-      <NavBar />
-
+    <div> 
 
       {/* Main content area */}
        <main className="p-6">
