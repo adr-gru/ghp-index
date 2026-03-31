@@ -10,22 +10,21 @@ export default async function NbaPage() {
   const teams = await response.json();
 
   return (
-    <div>
-      {/* Main content area */}
-       <main className="p-6">
-        <h1 className="text-xl mb-4">Teams</h1>
-        <div className="grid grid-cols-4 gap-4">
-          {teams.map((team) => (
-            <TeamCard
-              key={team.id}
-              id={team.id}
-              full_name={team.full_name}
-              abbreviation={team.abbreviation}
-            />
-          ))}
-        </div>
-      </main>
-
-    </div>
+    <main className="max-w-7xl mx-auto px-6 py-8">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-[#2D3E40]">NBA Teams</h1>
+        <p className="text-[#97A6A0] text-sm mt-1">{teams.length} teams</p>
+      </div>
+      <div className="grid grid-cols-4 gap-3">
+        {teams.map((team: { id: number; full_name: string; abbreviation: string }) => (
+          <TeamCard
+            key={team.id}
+            id={team.id}
+            full_name={team.full_name}
+            abbreviation={team.abbreviation}
+          />
+        ))}
+      </div>
+    </main>
   );
 }

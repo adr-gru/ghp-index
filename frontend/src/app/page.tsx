@@ -1,17 +1,12 @@
-import Link from "next/link";
-
 export const metadata = {
   title: "Homepage | GHP-Index",
 };
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Main content area */}
-      <main className="p-6">
-        <h2 className="text-xl">Dashboard</h2>
-        <p className="text-zinc-400">Coming soon...</p>
-      </main>
-    </div>
+    <main className="max-w-7xl mx-auto px-6 py-12">
+      <h1 className="text-3xl font-bold text-[#2D3E40]">Dashboard</h1>
+      <p className="text-[#97A6A0] mt-2">Coming soon...</p>
+    </main>
   );
 }
