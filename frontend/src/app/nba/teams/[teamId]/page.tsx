@@ -2,6 +2,7 @@ import Image from "next/image";
 import { findStateAbr } from "@/utils/states";
 import PlayerCard from "@/components/PlayerCard";
 import GameLog from "@/components/GameLog";
+import TeamInfoNote from "@/components/TeamInfoNote";
 
 
 export async function generateMetadata({ params }: TeamPageProps) {
@@ -32,6 +33,8 @@ export default async function TeamPage({ params }: TeamPageProps) {
   const teamName = team.info.resultSets[0].rowSet[0][3];
   const wins = team.info.resultSets[0].rowSet[0][9];
   const losses = team.info.resultSets[0].rowSet[0][10];
+  const record = `${wins}–${losses}`;
+  const location = `${city}, ${findStateAbr(city)}`;
   const teamAbr = team.info.resultSets[0].rowSet[0][4];
   const conference = team.info.resultSets[0].rowSet[0][5];
   const roster = team.roster.resultSets[0].rowSet.map((player: string[]) => ({
@@ -98,18 +101,10 @@ export default async function TeamPage({ params }: TeamPageProps) {
           <h1 className="text-4xl font-bold text-[#2D3E40] tracking-tight">{city} {teamName}</h1>
           <p className="text-[#97A6A0] font-medium mt-1">{teamAbr}</p>
           <div className="flex gap-3 mt-4">
-            <div className="bg-[#E4F2E7]/60 rounded-lg px-4 py-2 border border-[#93BFB7]/40">
-              <p className="text-xs text-[#97A6A0] uppercase tracking-wider font-semibold">Record</p>
-              <p className="text-lg font-bold text-[#2D3E40] mt-0.5">{wins}–{losses}</p>
-            </div>
-            <div className="bg-[#E4F2E7]/60 rounded-lg px-4 py-2 border border-[#93BFB7]/40">
-              <p className="text-xs text-[#97A6A0] uppercase tracking-wider font-semibold">Conference</p>
-              <p className="text-lg font-bold text-[#2D3E40] mt-0.5">{conference}</p>
-            </div>
-            <div className="bg-[#E4F2E7]/60 rounded-lg px-4 py-2 border border-[#93BFB7]/40">
-              <p className="text-xs text-[#97A6A0] uppercase tracking-wider font-semibold">Location</p>
-              <p className="text-lg font-bold text-[#2D3E40] mt-0.5">{city}, {findStateAbr(city)}</p>
-            </div>
+            <TeamInfoNote title="Record" info={record}/>
+            <TeamInfoNote title="Conference" info={conference}/>
+            <TeamInfoNote title="Location" info={location}/>
+            
           </div>
         </div>
       </div>
