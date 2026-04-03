@@ -1,4 +1,7 @@
-import Image from "next/image";
+import Image from "next/image"; 
+import PlayerGameLog from "@/components/PlayerGameLog";
+import TeamInfoNote  from "@/components/TeamInfoNote";
+import PlayerTabs  from "@/components/PlayerTabs";
 
 
 export async function generateMetadata({ params }: PlayerPageProps) {
@@ -26,15 +29,67 @@ export default async function PlayerPage({ params }: PlayerPageProps) {
 
   const response = await fetch(`http://localhost:8000/api/players/${playerId}`);
   const player = await response.json();
-  const name = player.info.resultSets[0].rowSet[0][3];
-  const birthday = player.info.resultSets[0].rowSet[0][3];
-  const school = player.info.resultSets[0].rowSet[0][8];
-  const country = player.info.resultSets[0].rowSet[0][9];
-  const team = player.info.resultSets[0].rowSet[0][18];
-  const teamAbr = player.info.resultSets[0].rowSet[0][19];
-  const city = player.info.resultSets[0].rowSet[0][21];
-  const height = player.info.resultSets[0].rowSet[0][11];
-  const weight = player.info.resultSets[0].rowSet[0][12];
+  const playerInfo = player.info.resultSets[0].rowSet.map((player: string[]) => ({
+    personId:        player[0],
+    firstName:       player[1],
+    lastName:        player[2],
+    name:            player[3],
+    birthday:        player[7],
+    school:          player[8],
+    country:         player[9],
+    height:          player[11],
+    weight:          player[12],
+    seasonExp:       player[13],
+    jersey:          player[14],
+    position:        player[15],
+    rosterStatus:    player[16],
+    teamId:          player[17],
+    team:            player[18],
+    teamName:        player[19],
+    city:            player[22],
+    fromYear:        player[23],
+    toYear:          player[24],
+    draftYear:       player[28],
+    draftRound:      player[29],
+    draftNumber:     player[30],
+  }));
+  const playerHeadlineStats = player.info.resultSets[1].rowSet.map((player: string[]) => ({
+    points:        player[3], 
+    assists:        player[4], 
+    rebounds:        player[5],  
+  }));
+  const { name, birthday, school, country, teamName, city, height, weight, jersey, position, rosterStatus, draftYear } = playerInfo[0];
+
+  const playerlogResponse = await fetch(`http://localhost:8000/api/players/${playerId}/playergamelog/`);
+  const playerlog = await playerlogResponse.json();
+  const playerLogs = playerlog.info.resultSets[0].rowSet.map((game: string[]) => ({
+    playerStatsDate:            game[3],
+    matchup:                    game[4],
+    winLoss:                    game[5],
+    minutes:                    game[6],
+    fieldGoalsMade:             game[7],
+    fieldGoalsAttempted:        game[8],
+    fieldGoalPercentage:        game[9],
+    fieldGoalThreePointsMade:   game[10],
+    fieldGoalThreeAttempted:    game[11],
+    fieldGoalThreePercentage:   game[12],
+    freeThrowsMade:             game[13],
+    freeThrowsAttempted:        game[14],
+    freeThrowPercentage:        game[15],
+    offensiveRebounds:          game[16],
+    defensiveRebounds:          game[17],
+    rebounds:                   game[18],
+    assists:                    game[19],
+    steals:                     game[20],
+    blocks:                     game[21],
+    turnovers:                  game[22],
+    personalFouls:              game[23],
+    points:                     game[24],
+    plusMinus:                  game[25],
+  }));
+
+  const {points, assists, rebounds} = playerHeadlineStats[0];
+
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-10">
@@ -51,27 +106,19 @@ export default async function PlayerPage({ params }: PlayerPageProps) {
           </div>
         </div>
         <div>
-          <h1 className="text-4xl font-bold text-[#2D3E40] tracking-tight">{name}</h1>
-          <div className="flex gap-3 mt-4">
-            <div className="bg-[#E4F2E7]/60 rounded-lg px-4 py-2 border border-[#93BFB7]/40">
-              <p className="text-xs text-[#97A6A0] uppercase tracking-wider font-semibold">Team</p>
-              <p className="text-lg font-bold text-[#2D3E40] mt-0.5">{team}</p>
-            </div>
-            <div className="bg-[#E4F2E7]/60 rounded-lg px-4 py-2 border border-[#93BFB7]/40">
-              <p className="text-xs text-[#97A6A0] uppercase tracking-wider font-semibold">Height</p>
-              <p className="text-lg font-bold text-[#2D3E40] mt-0.5">{height}</p>
-            </div>
-            <div className="bg-[#E4F2E7]/60 rounded-lg px-4 py-2 border border-[#93BFB7]/40">
-              <p className="text-xs text-[#97A6A0] uppercase tracking-wider font-semibold">Weight</p>
-              <p className="text-lg font-bold text-[#2D3E40] mt-0.5">{weight} lbs</p>
-            </div>
+          <h1 className="text-4xl font-bold text-[#2D3E40] tracking-tight mb-2">{name}</h1>
+          <h3 className="text-sm tracking-tight mb-2">{city} {teamName} • #{jersey} • {position}</h3>
+          <h2 className="text-kg font-bold text-[#2D3E40]">At a Glance</h2>
+          <div className="flex gap-3 ">
+            <TeamInfoNote title="Points" info={points}/> 
+            <TeamInfoNote title="Assists" info={assists}/> 
+            <TeamInfoNote title="Rebounds" info={rebounds}/> 
           </div>
         </div>
       </div>
-
-      {/* Last Games */}
-      <div>
-        <h2 className="text-xl font-bold text-[#2D3E40] mb-4">Last Games</h2>
+ 
+      <div> 
+        <PlayerTabs stats={playerLogs} />
       </div>
     </div>
   );
