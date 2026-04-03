@@ -48,9 +48,9 @@ def get_team_logs(team_id: int):
       return {
         "info": team_info.get_dict()
     }
-@app.get("/api/{team_id}/playergamelog/")
+@app.get("/api/players/{player_id}/playergamelog/")
 def get_player_game_logs(player_id: int):
-      player_stats = playergamelog.PlayerGameLog(player_id=player_id) 
+      player_stats = playergamelog.PlayerGameLog(player_id=player_id)
       return {
         "info": player_stats.get_dict()
     }
