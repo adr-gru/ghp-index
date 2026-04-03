@@ -3,10 +3,11 @@
 import { useState } from "react";
 
 interface PlayerStats { 
-  gameDate: string;
+  playerStatsDate: string;
   matchup: string;
   winLoss: string;
   points: string;
+  minutes: string;
   rebounds: string;
   assists: string;
   steals: string;
@@ -15,9 +16,11 @@ interface PlayerStats {
   personalFouls: string;
   plusMinus: string
   fieldGoalsMade: string;
+  fieldGoalsAttempted: string;
   fieldGoalPercentage: string;
   fieldGoalThreePointsMade: string;
   fieldGoalThreeAttempted: string;
+  fieldGoalThreePercentage: string;
   freeThrowsMade: string;
   freeThrowsAttempted: string;
   freeThrowPercentage: string;
@@ -25,7 +28,7 @@ interface PlayerStats {
   defensiveRebounds: string;
 }
 
-export default function GameLog({ stats }: { stats: PlayerStats[] }) {
+export default function playerGameLog({ stats }: { stats: PlayerStats[] }) {
   const [expanded, setExpanded] = useState(false);
 
   const displayed = expanded ? stats : stats.slice(0, 10);
@@ -42,30 +45,30 @@ export default function GameLog({ stats }: { stats: PlayerStats[] }) {
             </tr>
           </thead>
           <tbody>
-            {displayed.map((game, i) => (
+            {displayed.map((playerStats, i) => (
               <tr key={i} className={`border-b border-[#93BFB7]/20 hover:bg-[#93BFB7]/10 transition-colors ${i % 2 !== 0 ? "bg-[#E4F2E7]/30" : ""}`}>
-                <td className="px-4 py-2.5 text-[#97A6A0] whitespace-nowrap">{game.gameDate}</td>
-                <td className="px-4 py-2.5 font-medium text-[#2D3E40] whitespace-nowrap">{game.matchup}</td>
-                <td className={`px-4 py-2.5 font-bold ${game.wl === "W" ? "text-green-600" : "text-red-500"}`}>{game.wl}</td>
-                <td className="px-4 py-2.5 text-[#2D3E40]/70">{game.min}</td>
-                <td className="px-4 py-2.5 font-semibold text-[#2D3E40]">{game.pts}</td>
-                <td className="px-4 py-2.5 text-[#2D3E40]/70">{game.reb}</td>
-                <td className="px-4 py-2.5 text-[#2D3E40]/70">{game.ast}</td>
-                <td className="px-4 py-2.5 text-[#2D3E40]/70">{game.stl}</td>
-                <td className="px-4 py-2.5 text-[#2D3E40]/70">{game.blk}</td>
-                <td className="px-4 py-2.5 text-[#2D3E40]/70">{game.tov}</td>
-                <td className="px-4 py-2.5 text-[#2D3E40]/70">{game.fgm}</td>
-                <td className="px-4 py-2.5 text-[#2D3E40]/70">{game.fga}</td>
-                <td className="px-4 py-2.5 text-[#2D3E40]/70">{game.fgPct}</td>
-                <td className="px-4 py-2.5 text-[#2D3E40]/70">{game.fg3m}</td>
-                <td className="px-4 py-2.5 text-[#2D3E40]/70">{game.fg3a}</td>
-                <td className="px-4 py-2.5 text-[#2D3E40]/70">{game.fg3Pct}</td>
-                <td className="px-4 py-2.5 text-[#2D3E40]/70">{game.ftm}</td>
-                <td className="px-4 py-2.5 text-[#2D3E40]/70">{game.fta}</td>
-                <td className="px-4 py-2.5 text-[#2D3E40]/70">{game.ftPct}</td>
-                <td className="px-4 py-2.5 text-[#2D3E40]/70">{game.oreb}</td>
-                <td className="px-4 py-2.5 text-[#2D3E40]/70">{game.dreb}</td>
-                <td className="px-4 py-2.5 text-[#2D3E40]/70">{game.pf}</td>
+                <td className="px-4 py-2.5 text-[#97A6A0] whitespace-nowrap">{playerStats.playerStatsDate}</td>
+                <td className="px-4 py-2.5 font-medium text-[#2D3E40] whitespace-nowrap">{playerStats.matchup}</td>
+                <td className={`px-4 py-2.5 font-bold ${playerStats.winLoss === "W" ? "text-green-600" : "text-red-500"}`}>{playerStats.winLoss}</td>
+                <td className="px-4 py-2.5 text-[#2D3E40]/70">{playerStats.minutes}</td>
+                <td className="px-4 py-2.5 font-semibold text-[#2D3E40]">{playerStats.points}</td>
+                <td className="px-4 py-2.5 text-[#2D3E40]/70">{playerStats.rebounds}</td>
+                <td className="px-4 py-2.5 text-[#2D3E40]/70">{playerStats.assists}</td>
+                <td className="px-4 py-2.5 text-[#2D3E40]/70">{playerStats.steals}</td>
+                <td className="px-4 py-2.5 text-[#2D3E40]/70">{playerStats.blocks}</td>
+                <td className="px-4 py-2.5 text-[#2D3E40]/70">{playerStats.turnovers}</td>
+                <td className="px-4 py-2.5 text-[#2D3E40]/70">{playerStats.fieldGoalsMade}</td>
+                <td className="px-4 py-2.5 text-[#2D3E40]/70">{playerStats.fieldGoalsAttempted}</td>
+                <td className="px-4 py-2.5 text-[#2D3E40]/70">{playerStats.fieldGoalPercentage}</td>
+                <td className="px-4 py-2.5 text-[#2D3E40]/70">{playerStats.fieldGoalThreePointsMade}</td>
+                <td className="px-4 py-2.5 text-[#2D3E40]/70">{playerStats.fieldGoalThreeAttempted}</td>
+                <td className="px-4 py-2.5 text-[#2D3E40]/70">{playerStats.fieldGoalThreePercentage}</td>
+                <td className="px-4 py-2.5 text-[#2D3E40]/70">{playerStats.freeThrowsMade}</td>
+                <td className="px-4 py-2.5 text-[#2D3E40]/70">{playerStats.freeThrowsAttempted}</td>
+                <td className="px-4 py-2.5 text-[#2D3E40]/70">{playerStats.freeThrowPercentage}</td>
+                <td className="px-4 py-2.5 text-[#2D3E40]/70">{playerStats.offensiveRebounds}</td>
+                <td className="px-4 py-2.5 text-[#2D3E40]/70">{playerStats.defensiveRebounds}</td>
+                <td className="px-4 py-2.5 text-[#2D3E40]/70">{playerStats.personalFouls}</td>
               </tr>
             ))}
           </tbody>
@@ -76,7 +79,7 @@ export default function GameLog({ stats }: { stats: PlayerStats[] }) {
           onClick={() => setExpanded(!expanded)}
           className="text-sm font-medium text-[#387373] hover:text-[#2D3E40] transition-colors"
         >
-          {expanded ? "Show less" : `Show all ${games.length} games`}
+          {expanded ? "Show less" : `Show all ${stats.length} Games`}
         </button>
       </div>
     </div>
