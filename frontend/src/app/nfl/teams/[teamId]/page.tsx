@@ -11,7 +11,7 @@ export default async function TeamPage({ params }: TeamPageProps) {
   const { teamId } = await params;
 
   // Use the teamId in the URL to fetch that specific team
-  const response = await fetch(`http://localhost:8000/api/teams/${teamId}`);
+  const response = await fetch(`${process.env.API_URL}/api/teams/${teamId}`);
   const team = await response.json();
   const city = team.info.resultSets[0].rowSet[0][2];
   const teamName = team.info.resultSets[0].rowSet[0][3];

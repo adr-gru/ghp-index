@@ -20,26 +20,26 @@ GHP-Index is a web application that aggregates and displays statistics from the 
 - [x] Next.js + React 19 + TypeScript + Tailwind CSS 4 project initialized
 - [x] Python FastAPI backend with `nba_api` integration
 - [x] NBA team listing page — fetches all teams, displays as logo cards
-- [x] NBA team detail page — team info, record, conference, roster grid
-- [x] NBA player detail page — headshot, basic player info (partial — stats section pending)
-- [x] Reusable components: `Header`, `NavBar`, `TeamCard`, `PlayerCard`, `GameLog`
+- [x] NBA team detail page — team info, record, conference, division, rankings, PPG/RPG/APG, roster grid, game log
+- [x] NBA player detail page — headshot, bio, season averages, game log via `PlayerTabs`
+- [x] Reusable components: `Header`, `NavBar`, `TeamCard`, `PlayerCard`, `GameLog`, `PlayerGameLog`, `PlayerTabs`, `TeamInfoNote`
 - [x] Dynamic routing: `/nba/teams/[teamId]` and `/nba/players/[playerId]`
 - [x] League pages scaffolded: NBA, NFL, MLB, NHL (placeholders)
-- [x] Backend endpoints: `/api/teams`, `/api/teams/{id}`, `/api/players/{id}`, `/api/{team_id}/teamgamelog/`
+- [x] Backend endpoints: `/api/teams`, `/api/teams/{id}`, `/api/players/{id}`, `/api/{team_id}/teamgamelog/`, `/api/players/{id}/playergamelog/`
 - [x] NBA CDN images working (team logos + player headshots)
 - [x] `Header` + `NavBar` moved into `layout.tsx` — no longer duplicated per page
-- [x] "Last Games" game log table on team detail page (via `GameLog` component)
 - [x] Complete visual refactor — cohesive dark theme with custom color palette
+- [x] All hardcoded `localhost:8000` URLs replaced with `process.env.API_URL` via `.env.local`
+- [x] nba_api array indices replaced with named mappings throughout team + player pages
+- [x] `PlayerTabs` component with Last Games, Projections (stub), Career (stub) tabs
 
 ### In Progress
-- [ ] NBA player detail page — fix birthday data bug, build out stats section
-- [ ] Player game log ("Last Games" on player page)
+- [ ] `NBAPlayerProjection.tsx` — component exists but is empty, Projections tab shows stub
 
 ### Known Issues (Fix Before Moving Forward)
-- [ ] **Hardcoded backend URL** — `http://localhost:8000` used everywhere, needs `.env.local`
+- [x] ~~Hardcoded backend URL~~ — replaced with `process.env.API_URL` via `.env.local`
+- [x] ~~Magic array indices~~ — team and player pages now use named mappings
 - [ ] **No error handling** — fetch calls will crash the page if backend is down
-- [ ] **Magic array indices** — nba_api data accessed by number (`rowSet[0][14]`) with no type definitions
-- [ ] **Player page birthday bug** — wrong array index assigned, pulls player name instead
 - [ ] **No active link state** — NavBar doesn't show which page is currently active
 
 ---
@@ -102,20 +102,17 @@ ghp-index/
 
 ### Sprint Tasks (Priority Order)
 
-**Cleanup & Stability**
-- [ ] Add `.env.local` with `NEXT_PUBLIC_API_URL` — replace all hardcoded `localhost:8000` references
+**Stability**
 - [ ] Add `try/catch` + fallback UI to all fetch calls (show error message if backend is down)
-- [ ] Define TypeScript interfaces for nba_api response shapes — eliminate magic array indices
 
-**NBA Player Page**
-- [ ] Fix birthday bug on player page (wrong array index — pulls name instead of birthday)
-- [ ] Add season averages to player page (pts, reb, ast, stl, blk, fg%, 3p%)
-- [ ] Add "Last Games" game log table to player page (reuse `GameLog` component)
-- [ ] Show team name + link on player page
+**Player Projections (Next)**
+- [ ] Add `/api/players/{id}/projection` endpoint to FastAPI backend
+- [ ] Build out `NBAPlayerProjection.tsx` component
+- [ ] Wire component into the Projections tab in `PlayerTabs.tsx` (currently shows stub)
 
 **Polish**
 - [ ] Add active link highlighting to NavBar (show current page)
-- [ ] Wire up `states.ts` to team detail page, or remove the file if unused
+- [ ] Add team page link on player page hero (city + team name → `/nba/teams/{teamId}`)
 
 ---
 
@@ -209,6 +206,7 @@ ghp-index/
 | Mar 2, 2026 | 4 | Project review — identified known issues, revised and updated PROJECT_BRIEF.md |
 | Mar–Apr, 2026 | 5 | Header/NavBar moved to layout.tsx; GameLog component + team game log; complete visual refactor |
 | Apr 1, 2026 | 6 | Updated PROJECT_BRIEF.md to reflect completed work; defined current sprint |
+| Apr 6, 2026 | 7 | Replaced all hardcoded API URLs with `process.env.API_URL`; fixed team page index mappings (wins/losses off-by-one due to undocumented TEAM_SLUG column); added division, conference rank, win%, since year to team hero; updated PROJECT_BRIEF.md |
 
 ---
 

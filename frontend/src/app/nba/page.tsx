@@ -6,7 +6,7 @@ export const metadata = {
 
 export default async function NbaPage() {
 
-  const response = await fetch("http://localhost:8000/api/teams");
+  const response = await fetch(`${process.env.API_URL}/api/teams`);
   const teams = await response.json();
 
   return (

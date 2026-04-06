@@ -6,7 +6,7 @@ import PlayerTabs from "@/components/PlayerTabs";
 
 export async function generateMetadata({ params }: PlayerPageProps) {
   const { playerId } = await params;
-  const response = await fetch(`http://localhost:8000/api/players/${playerId}`);
+  const response = await fetch(`${process.env.API_URL}/api/players/${playerId}`);
   const player = await response.json();
 
   const name = player.info.resultSets[0].rowSet[0][3];
@@ -27,7 +27,7 @@ interface PlayerPageProps {
 export default async function PlayerPage({ params }: PlayerPageProps) {
   const { playerId } = await params;
 
-  const response = await fetch(`http://localhost:8000/api/players/${playerId}`);
+  const response = await fetch(`${process.env.API_URL}/api/players/${playerId}`);
   const player = await response.json();
   const playerInfo = player.info.resultSets[0].rowSet.map((player: string[]) => ({
     personId: player[0],
@@ -60,7 +60,7 @@ export default async function PlayerPage({ params }: PlayerPageProps) {
   }));
   const { name, birthday, school, country, teamName, city, height, weight, jersey, position, rosterStatus, draftYear } = playerInfo[0];
 
-  const playerlogResponse = await fetch(`http://localhost:8000/api/players/${playerId}/playergamelog/`);
+  const playerlogResponse = await fetch(`${process.env.API_URL}/api/players/${playerId}/playergamelog/`);
   const playerlog = await playerlogResponse.json();
   const playerLogs = playerlog.info.resultSets[0].rowSet.map((game: string[]) => ({
     playerStatsDate: game[3],
@@ -126,8 +126,6 @@ export default async function PlayerPage({ params }: PlayerPageProps) {
           <h3 className="text-sm text-[#2D3E40] tracking-tight"> • Draft Year: {draftYear}</h3>
           <h3 className="text-sm text-[#2D3E40] tracking-tight"> • Status: {rosterStatus}</h3>
         </div>
-
-
       </div>
 
       <div>
