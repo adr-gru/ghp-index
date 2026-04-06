@@ -1,6 +1,6 @@
 # GHP-Index: Sports Statistics Web Application
 
-> **Last Updated:** April 1, 2026
+> **Last Updated:** April 6, 2026
 > **Project Owner:** Adrian G. (4th Year CS Student)
 > **Purpose:** Portfolio project + skill development
 
@@ -142,18 +142,34 @@ ghp-index/
 3. Box score view for individual games
 
 ### Phase 4: NBA Dashboard
-1. Home page with today's games, top performers, league leaders
-2. Search across players and teams
+**Widgets (no new backend endpoint needed):**
+1. League hub cards — big nav cards for NBA/NFL/MLB/NHL (pure UI, no data fetch)
+2. Quick-access team grid — all 30 teams via existing `/api/teams` + `TeamCard`
+3. Featured player spotlight — headshot + last 3 games via existing player endpoints + `PlayerCard`
+
+**Widgets (requires new backend endpoint):**
+4. Scoreboard — today's matchups with scores → new `/api/games/today` (nba_api: `ScoreboardV2`)
+5. League leaders — top 5 in PPG/RPG/APG with Recharts bar chart → new `/api/leaders` (nba_api: `LeagueLeaders`)
+6. Standings — East/West conference table → new `/api/standings` (nba_api: `LeagueStandingsV3`)
+
+**Other:**
+7. Search across players and teams
 
 ### Phase 5: NBA Enhanced Features
 1. Player comparison tool (side-by-side stats)
 2. Team standings page
 3. Season stat leaders
 
-### Phase 6: AI Features
-1. AI-powered game/performance breakdowns
-2. Player projections (fantasy-style scoring)
-3. Trend analysis
+### Phase 6: AI Features (Next Up)
+**Player Projections:**
+1. Next-game stat projection (pts/reb/ast) based on recent game log trends
+2. Fantasy-style scoring projection output
+3. Surface projections on player page via existing `NBAPlayerProjection.tsx` component
+4. New backend endpoint: `/api/players/{id}/projection`
+
+**Future:**
+5. AI-powered game/performance breakdowns (narrative summaries)
+6. Trend analysis — hot/cold streaks, usage rate shifts
 
 ### Phase 7: Expand to Other Leagues
 1. Abstract NBA patterns into reusable components

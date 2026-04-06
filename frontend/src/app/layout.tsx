@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "GHP-Index",
-  description: "Sports statistics index",
+  description: "Sports Data Aggregator",
 };
 
 export default function RootLayout({
