@@ -12,8 +12,8 @@ export default async function NbaPage() {
   return (
     <main className="max-w-7xl mx-auto px-6 py-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[#2D3E40]">NBA Teams</h1>
-        <p className="text-[#97A6A0] text-sm mt-1">{teams.length} teams</p>
+        <h1 className="text-2xl font-bold text-[#f1f5f9]">NBA Teams</h1>
+        <p className="text-[#94a3b8] text-sm mt-1">{teams.length} teams</p>
       </div>
       <div className="grid grid-cols-4 gap-3">
         {teams.map((team: { id: number; full_name: string; abbreviation: string }) => (

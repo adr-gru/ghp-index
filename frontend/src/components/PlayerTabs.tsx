@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import PlayerGameLog from "@/components/PlayerGameLog";
-interface PlayerStats { 
+import NBAPlayerProjection from "@/components/NBAPlayerProjection";
+
+interface PlayerStats {
   playerStatsDate: string;
   matchup: string;
   winLoss: string;
@@ -27,23 +29,39 @@ interface PlayerStats {
   offensiveRebounds: string;
   defensiveRebounds: string;
 }
+
+interface StatProjection {
+  projection: number;
+  low: number;
+  high: number;
+  season_avg: number;
+  trend: "up" | "down" | "flat";
+}
+
+export interface ProjectionData {
+  pts: StatProjection;
+  reb: StatProjection;
+  ast: StatProjection;
+  games_used: number;
+}
+
 const tabs = ["Last Games", "Projections", "Career"];
 
-export default function PlayerTabs({ stats }: { stats: PlayerStats[] }) {
+export default function PlayerTabs({ stats, projection }: { stats: PlayerStats[]; projection: ProjectionData }) {
   const [activeTab, setActiveTab] = useState("Last Games");
 
   return (
     <div>
       {/* Tab Nav */}
-      <div className="flex gap-1 border-b border-[#93BFB7]/40 mb-6">
+      <div className="flex gap-1 border-b border-[#334155] mb-6">
         {tabs.map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-sm font-medium transition-colors 
-              ${activeTab === tab 
-                ? "border-b-2 border-[#387373] text-[#387373]" 
-                : "text-[#97A6A0] hover:text-[#2D3E40]"}`}
+            className={`px-4 py-2 text-sm font-medium transition-colors
+              ${activeTab === tab
+                ? "border-b-2 border-[#38bdf8] text-[#38bdf8]"
+                : "text-[#94a3b8] hover:text-[#f1f5f9]"}`}
           >
             {tab}
           </button>
@@ -52,7 +70,7 @@ export default function PlayerTabs({ stats }: { stats: PlayerStats[] }) {
 
       {/* Tab Content */}
       {activeTab === "Last Games" && <PlayerGameLog stats={stats} />}
-      {activeTab === "Projections" && <div>Projections coming soon</div>}
+      {activeTab === "Projections" && <NBAPlayerProjection projection={projection} />}
       {activeTab === "Career" && <div>Career coming soon</div>}
     </div>
   );

@@ -11,7 +11,7 @@ export default function TeamCard({ id, full_name, abbreviation }: TeamCardValues
   return (
     <Link
       href={`/nba/teams/${id}`}
-      className="bg-white rounded-xl border border-[#93BFB7]/40 shadow-sm p-4 hover:shadow-md hover:border-[#93BFB7] transition-all">
+      className="bg-[#1e293b] rounded-md border border-[#334155] p-4 hover:border-[#38bdf8] transition-colors">
       <div className="flex items-center gap-3">
         <div className="relative w-14 h-14 shrink-0">
           <Image
@@ -21,8 +21,8 @@ export default function TeamCard({ id, full_name, abbreviation }: TeamCardValues
           />
         </div>
         <div>
-          <p className="font-semibold text-[#2D3E40] leading-tight">{full_name}</p>
-          <p className="text-xs text-[#97A6A0] font-medium tracking-wider mt-0.5">{abbreviation}</p>
+          <p className="font-semibold text-[#f1f5f9] leading-tight">{full_name}</p>
+          <p className="text-xs text-[#94a3b8] font-medium mt-0.5">{abbreviation}</p>
         </div>
       </div>
     </Link>

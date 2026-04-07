@@ -118,7 +118,7 @@ export default async function TeamPage({ params }: TeamPageProps) {
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-10">
       {/* Team Hero */}
-      <div className="bg-white rounded-2xl border border-[#93BFB7]/40 shadow-sm p-8 flex items-center gap-8">
+      <div className="bg-[#1e293b] rounded-md border border-[#334155] p-8 flex items-center gap-8">
         <div className="relative w-32 h-32 shrink-0">
           <Image
             src={`https://cdn.nba.com/logos/nba/${teamId}/primary/L/logo.svg`}
@@ -127,31 +127,45 @@ export default async function TeamPage({ params }: TeamPageProps) {
           />
         </div>
         <div>
-          <h1 className="text-4xl font-bold text-[#2D3E40] tracking-tight">{city} {teamName}</h1>
-          <p className="text-[#97A6A0] font-medium mt-1">{record} • {teamAbr} • {conference} </p>
+          <h1 className="text-4xl font-bold text-[#f1f5f9] tracking-tight">{city} {teamName}</h1>
+          <p className="text-[#94a3b8] font-medium mt-1">{record} · {teamAbr} · {conference}</p>
           <div className="flex gap-3 mt-4">
             <TeamInfoNote title="Points" info={pointsPerGame} />
             <TeamInfoNote title="Assists" info={assistsPerGame} />
             <TeamInfoNote title="Rebounds" info={reboundsPerGame} />
-
           </div>
         </div>
-        <div className="h-40 w-px bg-gray-400"></div>
-        <div className="flex flex-col gap-1">
-          <h3 className="text-sm text-[#2D3E40] tracking-tight"> • Location: {location}</h3>
-          <h3 className="text-sm text-[#2D3E40] tracking-tight"> • Division: {teamDivision}</h3>
-          <h3 className="text-sm text-[#2D3E40] tracking-tight"> • Division Rank: {divisionRank}</h3>
-          <h3 className="text-sm text-[#2D3E40] tracking-tight"> • Conference Rank: {conferenceRank}</h3>
-          <h3 className="text-sm text-[#2D3E40] tracking-tight"> • Since: {minYear}</h3>
-        </div>
+        <div className="h-40 w-px bg-[#334155] ml-auto"></div>
+        <dl className="flex flex-col gap-1.5 text-sm shrink-0">
+          <div className="flex gap-2">
+            <dt className="text-[#94a3b8]">Location</dt>
+            <dd className="text-[#f1f5f9]">{location}</dd>
+          </div>
+          <div className="flex gap-2">
+            <dt className="text-[#94a3b8]">Division</dt>
+            <dd className="text-[#f1f5f9]">{teamDivision}</dd>
+          </div>
+          <div className="flex gap-2">
+            <dt className="text-[#94a3b8]">Div. Rank</dt>
+            <dd className="text-[#f1f5f9]">{divisionRank}</dd>
+          </div>
+          <div className="flex gap-2">
+            <dt className="text-[#94a3b8]">Conf. Rank</dt>
+            <dd className="text-[#f1f5f9]">{conferenceRank}</dd>
+          </div>
+          <div className="flex gap-2">
+            <dt className="text-[#94a3b8]">Since</dt>
+            <dd className="text-[#f1f5f9]">{minYear}</dd>
+          </div>
+        </dl>
       </div>
 
       {/* Roster */}
       <div>
-        <h2 className="text-xl font-bold text-[#2D3E40] mb-4">Roster</h2>
+        <h2 className="text-xl font-bold text-[#f1f5f9] mb-4">Roster</h2>
         <div className="overflow-x-auto">
           <div className="flex gap-3 w-max pb-2">
-            {roster.map((player) => (
+            {roster.map((player: { playerId: number; playerName: string; position: string; playerNumber: number }) => (
               <PlayerCard
                 key={player.playerId}
                 id={player.playerId}
@@ -166,7 +180,7 @@ export default async function TeamPage({ params }: TeamPageProps) {
 
       {/* Game Log */}
       <div>
-        <h2 className="text-xl font-bold text-[#2D3E40] mb-4">Last Games</h2>
+        <h2 className="text-xl font-bold text-[#f1f5f9] mb-4">Last Games</h2>
         <GameLog games={games} />
       </div>
     </div>

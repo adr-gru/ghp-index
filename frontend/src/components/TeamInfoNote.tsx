@@ -1,4 +1,4 @@
-//import Link from "next/link"; 
+//import Link from "next/link";
 //leave for future, possibly adding conference pages etc...
 
 interface TeamInfoValue {
@@ -8,9 +8,9 @@ interface TeamInfoValue {
 
 export default function TeamInfoNote({ title, info }: TeamInfoValue) {
   return (
-    <div className="bg-[#E4F2E7]/60 rounded-lg px-4 py-2 border border-[#93BFB7]/40">
-      <p className="text-xs text-[#97A6A0] uppercase tracking-wider font-semibold">{title}</p>
-      <p className="text-lg font-bold text-[#2D3E40] mt-0.5">{info}</p>
+    <div className="bg-[#0f172a] rounded-md px-4 py-2 border border-[#334155]">
+      <p className="text-xs text-[#94a3b8] font-medium">{title}</p>
+      <p className="text-lg font-bold text-[#f1f5f9] mt-0.5">{info}</p>
     </div>
   );
 }

@@ -1,5 +1,4 @@
 import Image from "next/image";
-import PlayerGameLog from "@/components/PlayerGameLog";
 import TeamInfoNote from "@/components/TeamInfoNote";
 import PlayerTabs from "@/components/PlayerTabs";
 
@@ -60,8 +59,12 @@ export default async function PlayerPage({ params }: PlayerPageProps) {
   }));
   const { name, birthday, school, country, teamName, city, height, weight, jersey, position, rosterStatus, draftYear } = playerInfo[0];
 
-  const playerlogResponse = await fetch(`${process.env.API_URL}/api/players/${playerId}/playergamelog/`);
+  const [playerlogResponse, projectionResponse] = await Promise.all([
+    fetch(`${process.env.API_URL}/api/players/${playerId}/playergamelog/`),
+    fetch(`${process.env.API_URL}/api/players/${playerId}/projection/`),
+  ]);
   const playerlog = await playerlogResponse.json();
+  const projection = await projectionResponse.json();
   const playerLogs = playerlog.info.resultSets[0].rowSet.map((game: string[]) => ({
     playerStatsDate: game[3],
     matchup: game[4],
@@ -94,8 +97,8 @@ export default async function PlayerPage({ params }: PlayerPageProps) {
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-10">
       {/* Player Hero */}
-      <div className="bg-white rounded-2xl border border-[#93BFB7]/40 shadow-sm p-8 flex items-start gap-8">
-        <div className="bg-[#93BFB7]/20 rounded-xl overflow-hidden shrink-0">
+      <div className="bg-[#1e293b] rounded-md border border-[#334155] p-8 flex items-start gap-8">
+        <div className="overflow-hidden shrink-0">
           <div className="relative w-40 h-32">
             <Image
               src={`https://cdn.nba.com/headshots/nba/latest/1040x760/${playerId}.png`}
@@ -106,30 +109,49 @@ export default async function PlayerPage({ params }: PlayerPageProps) {
           </div>
         </div>
         <div>
-          <h1 className="text-4xl font-bold text-[#2D3E40] tracking-tight mb-2">{name}</h1>
-          <h3 className="text-sm text-[#2D3E40] tracking-tight mb-2">{city} {teamName} • #{jersey} • {position}</h3>
-          <h2 className="text-kg font-bold text-[#2D3E40]">At a Glance</h2>
-          <div className="flex gap-3 ">
+          <h1 className="text-4xl font-bold text-[#f1f5f9] tracking-tight mb-1">{name}</h1>
+          <p className="text-sm text-[#94a3b8] mb-4">{city} {teamName} · #{jersey} · {position}</p>
+          <div className="flex gap-3">
             <TeamInfoNote title="Points" info={points} />
             <TeamInfoNote title="Assists" info={assists} />
             <TeamInfoNote title="Rebounds" info={rebounds} />
-
           </div>
         </div>
-        <div className="h-40 w-px bg-gray-400"></div>
-        <div className="flex flex-col gap-1">
-          <h3 className="text-sm text-[#2D3E40] tracking-tight"> • Birthdate: {birthday.split("T")[0]}</h3>
-          <h3 className="text-sm text-[#2D3E40] tracking-tight"> • Birthplace: {country}</h3>
-          <h3 className="text-sm text-[#2D3E40] tracking-tight"> • School: {school}</h3>
-          <h3 className="text-sm text-[#2D3E40] tracking-tight"> • Height: {height}</h3>
-          <h3 className="text-sm text-[#2D3E40] tracking-tight"> • Weight: {weight} Lbs</h3>
-          <h3 className="text-sm text-[#2D3E40] tracking-tight"> • Draft Year: {draftYear}</h3>
-          <h3 className="text-sm text-[#2D3E40] tracking-tight"> • Status: {rosterStatus}</h3>
-        </div>
+        <div className="h-40 w-px bg-[#334155] ml-auto"></div>
+        <dl className="flex flex-col gap-1.5 text-sm shrink-0">
+          <div className="flex gap-2">
+            <dt className="text-[#94a3b8]">Birthdate</dt>
+            <dd className="text-[#f1f5f9]">{birthday.split("T")[0]}</dd>
+          </div>
+          <div className="flex gap-2">
+            <dt className="text-[#94a3b8]">Birthplace</dt>
+            <dd className="text-[#f1f5f9]">{country}</dd>
+          </div>
+          <div className="flex gap-2">
+            <dt className="text-[#94a3b8]">School</dt>
+            <dd className="text-[#f1f5f9]">{school}</dd>
+          </div>
+          <div className="flex gap-2">
+            <dt className="text-[#94a3b8]">Height</dt>
+            <dd className="text-[#f1f5f9]">{height}</dd>
+          </div>
+          <div className="flex gap-2">
+            <dt className="text-[#94a3b8]">Weight</dt>
+            <dd className="text-[#f1f5f9]">{weight} lbs</dd>
+          </div>
+          <div className="flex gap-2">
+            <dt className="text-[#94a3b8]">Draft Year</dt>
+            <dd className="text-[#f1f5f9]">{draftYear}</dd>
+          </div>
+          <div className="flex gap-2">
+            <dt className="text-[#94a3b8]">Status</dt>
+            <dd className="text-[#f1f5f9]">{rosterStatus}</dd>
+          </div>
+        </dl>
       </div>
 
       <div>
-        <PlayerTabs stats={playerLogs} />
+        <PlayerTabs stats={playerLogs} projection={projection} />
       </div>
     </div>
   );

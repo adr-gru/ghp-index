@@ -28,7 +28,7 @@ GHP-Index is a web application that aggregates and displays statistics from the 
 - [x] Backend endpoints: `/api/teams`, `/api/teams/{id}`, `/api/players/{id}`, `/api/{team_id}/teamgamelog/`, `/api/players/{id}/playergamelog/`
 - [x] NBA CDN images working (team logos + player headshots)
 - [x] `Header` + `NavBar` moved into `layout.tsx` — no longer duplicated per page
-- [x] Complete visual refactor — cohesive dark theme with custom color palette
+- [x] Complete visual refactor — cohesive dark theme with custom color palette (Slate Noir)
 - [x] All hardcoded `localhost:8000` URLs replaced with `process.env.API_URL` via `.env.local`
 - [x] nba_api array indices replaced with named mappings throughout team + player pages
 - [x] `PlayerTabs` component with Last Games, Projections (stub), Career (stub) tabs
@@ -39,8 +39,8 @@ GHP-Index is a web application that aggregates and displays statistics from the 
 ### Known Issues (Fix Before Moving Forward)
 - [x] ~~Hardcoded backend URL~~ — replaced with `process.env.API_URL` via `.env.local`
 - [x] ~~Magic array indices~~ — team and player pages now use named mappings
-- [ ] **No error handling** — fetch calls will crash the page if backend is down
-- [ ] **No active link state** — NavBar doesn't show which page is currently active
+- [ ] **No error handling** — fetch calls crash when backend returns a non-JSON response. Known error: `Unexpected token 'I', "Internal S"... is not valid JSON` — FastAPI returns a plain text 500 for certain player/team IDs (likely `nba_api` failing on that request), then `response.json()` blows up. Fix: check `response.ok` before `.json()` on frontend; add `try/except` in FastAPI endpoints to return JSON error responses instead of plain text 500s
+- [x] ~~No active link state~~ — NavBar now highlights active route via `usePathname`
 
 ---
 
@@ -207,6 +207,7 @@ ghp-index/
 | Mar–Apr, 2026 | 5 | Header/NavBar moved to layout.tsx; GameLog component + team game log; complete visual refactor |
 | Apr 1, 2026 | 6 | Updated PROJECT_BRIEF.md to reflect completed work; defined current sprint |
 | Apr 6, 2026 | 7 | Replaced all hardcoded API URLs with `process.env.API_URL`; fixed team page index mappings (wins/losses off-by-one due to undocumented TEAM_SLUG column); added division, conference rank, win%, since year to team hero; updated PROJECT_BRIEF.md |
+| Apr 6, 2026 | 8 | Total visual redesign (Uncodixfy): Slate Noir dark palette (`#0f172a`/`#1e293b`/`#38bdf8`); removed all white cards, oversized border radii, eyebrow labels, zebra stripes, shadow effects; NavBar active route highlighting; `<dl>/<dt>/<dd>` for hero info lists; `NBAPlayerProjection` styled to match; all 14 files updated |
 
 ---
 
