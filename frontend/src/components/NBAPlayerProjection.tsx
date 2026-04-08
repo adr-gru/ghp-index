@@ -22,14 +22,16 @@ function StatCard({ label, data }: { label: string; data: ProjectionData["pts"] 
 export default function NBAPlayerProjection({ projection }: { projection: ProjectionData }) {
   return (
     <div className="space-y-4">
-      <p className="text-xs text-[#94a3b8]">
-        Next-game estimates based on last {projection.games_used} games (EWMA, ±1 std dev)
-      </p>
       <div className="flex gap-4">
         <StatCard label="Points" data={projection.pts} />
         <StatCard label="Rebounds" data={projection.reb} />
         <StatCard label="Assists" data={projection.ast} />
+        <StatCard label="Steals" data={projection.stl} />
+        <StatCard label="Blocks" data={projection.blk} />
       </div>
+      <p className="text-xs text-[#94a3b8]">
+        Next-game estimates based on last {projection.games_used} games (EWMA, ±1 std dev)
+      </p>
     </div>
   );
 }

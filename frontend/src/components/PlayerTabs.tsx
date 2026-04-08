@@ -42,6 +42,8 @@ export interface ProjectionData {
   pts: StatProjection;
   reb: StatProjection;
   ast: StatProjection;
+  stl: StatProjection;
+  blk: StatProjection;
   games_used: number;
 }
 
