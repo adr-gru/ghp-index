@@ -48,6 +48,18 @@ def get_player(player_id: int):
 @app.get("/api/{team_id}/teamgamelog/")
 def get_team_logs(team_id: int):
       team_info = teamgamelog.TeamGameLog(team_id=team_id) 
+      data = team_info.get_dict()
+      result_set=data["resultSets"][0]
+      rows = result_set["rowSet"]
+
+      if not rows:
+        raise HTTPException(status_code=404, detail="no team found")
+      
+      df = pd.DataFrame(rows, columns=result_set["headers"])
+      window = min(10, len(df))
+      # nba_api returns most recent first; reverse slice to get chronological order
+      recent = df.head(window).iloc[::-1].reset_index(drop=True)
+
       return {
         "info": team_info.get_dict()
     }
@@ -69,14 +81,23 @@ def get_player_projection(player_id: int):
         raise HTTPException(status_code=404, detail="No game log found")
 
     df = pd.DataFrame(rows, columns=result_set["headers"])
-    for col in ["PTS", "REB", "AST"]:
+    for col in ["PTS", "REB", "AST", "STL", "BLK", "TOV"]:
         df[col] = pd.to_numeric(df[col])
 
     window = min(10, len(df))
     # nba_api returns most recent first; reverse slice to get chronological order
     recent = df.head(window).iloc[::-1].reset_index(drop=True)
 
-    def project_stat(col: str) -> dict:
+    return {
+        "pts": project_stat("PTS", recent, df),
+        "reb": project_stat("REB", recent, df),
+        "ast": project_stat("AST", recent, df),
+        "stl": project_stat("STL", recent, df),
+        "blk": project_stat("BLK", recent, df),
+        "games_used": window,
+    }
+
+def project_stat(col: str, recent: pd.DataFrame, df: pd.DataFrame) -> dict:
         vals = recent[col].values
         ewma_val = float(pd.Series(vals).ewm(span=5, adjust=False).mean().iloc[-1])
         std = float(recent[col].std()) if len(vals) > 1 else 0.0
@@ -97,10 +118,3 @@ def get_player_projection(player_id: int):
             "season_avg": round(season_avg, 1),
             "trend": trend,
         }
-
-    return {
-        "pts": project_stat("PTS"),
-        "reb": project_stat("REB"),
-        "ast": project_stat("AST"),
-        "games_used": window,
-    }

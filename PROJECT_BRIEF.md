@@ -1,6 +1,6 @@
 # GHP-Index: Sports Statistics Web Application
 
-> **Last Updated:** April 6, 2026
+> **Last Updated:** April 8, 2026
 > **Project Owner:** Adrian G. (4th Year CS Student)
 > **Purpose:** Portfolio project + skill development
 
@@ -32,9 +32,12 @@ GHP-Index is a web application that aggregates and displays statistics from the 
 - [x] All hardcoded `localhost:8000` URLs replaced with `process.env.API_URL` via `.env.local`
 - [x] nba_api array indices replaced with named mappings throughout team + player pages
 - [x] `PlayerTabs` component with Last Games, Projections (stub), Career (stub) tabs
+- [x] `/api/players/{id}/projection` endpoint — EWMA + linregress trend for PTS/REB/AST and extended stats
+- [x] `NBAPlayerProjection.tsx` — built out with StatCard, trend indicators, projection range
+- [x] Roster panel on team page — 2-column scrollable grid sized to match GameLog height
 
 ### In Progress
-- [ ] `NBAPlayerProjection.tsx` — component exists but is empty, Projections tab shows stub
+- [ ] Shot chart heatmap — `ShotChartDetail` endpoint integration
 
 ### Known Issues (Fix Before Moving Forward)
 - [x] ~~Hardcoded backend URL~~ — replaced with `process.env.API_URL` via `.env.local`
@@ -105,14 +108,70 @@ ghp-index/
 **Stability**
 - [ ] Add `try/catch` + fallback UI to all fetch calls (show error message if backend is down)
 
-**Player Projections (Next)**
-- [ ] Add `/api/players/{id}/projection` endpoint to FastAPI backend
-- [ ] Build out `NBAPlayerProjection.tsx` component
+**Player Projections** ✅
+- [x] Add `/api/players/{id}/projection` endpoint to FastAPI backend
+- [x] Build out `NBAPlayerProjection.tsx` component
 - [ ] Wire component into the Projections tab in `PlayerTabs.tsx` (currently shows stub)
 
 **Polish**
-- [ ] Add active link highlighting to NavBar (show current page)
+- [x] Add active link highlighting to NavBar (show current page)
 - [ ] Add team page link on player page hero (city + team name → `/nba/teams/{teamId}`)
+
+
+---
+
+## Sprint: Shot Chart Heatmap
+
+> **Goal:** Add a court heatmap to the player page showing shot location frequency and FG% by zone.
+
+### Background
+
+`nba_api` exposes `ShotChartDetail` which returns every shot attempt with `LOC_X`, `LOC_Y`, and made/missed status. This is the same data source the official NBA stats site uses for its shot charts.
+
+### Backend
+
+**New endpoint:** `/api/players/{player_id}/shotchart`
+
+```python
+from nba_api.stats.endpoints import shotchartdetail
+
+@app.get("/api/players/{player_id}/shotchart")
+def get_shot_chart(player_id: int):
+    chart = shotchartdetail.ShotChartDetail(
+        player_id=player_id,
+        team_id=0,
+        context_measure_simple="FGA"
+    )
+    data = chart.get_dict()
+    shots = data["resultSets"][0]
+    return {
+        "headers": shots["headers"],
+        "rows": shots["rowSet"]
+    }
+```
+
+Key columns returned: `LOC_X`, `LOC_Y`, `SHOT_MADE_FLAG`, `SHOT_ZONE_BASIC`, `SHOT_ZONE_AREA`, `SHOT_DISTANCE`
+
+### Frontend Options
+
+**Option A — Canvas/SVG heatmap (no extra deps)**
+- Render shot dots on an SVG court outline
+- Color by made (green) / missed (red), or opacity by density
+- Court outline is a static SVG asset or drawn with SVG primitives
+
+**Option B — `react-heatmap-grid` or `d3`**
+- Bin shots into zones, color by FG%
+- More work but looks more like the official NBA chart
+
+**Recommended starting point:** Option A with SVG dots — straightforward, no new library, visually clear.
+
+### Sprint Tasks (Priority Order)
+
+- [ ] Add `/api/players/{player_id}/shotchart` endpoint to `backend/main.py`
+- [ ] Create `ShotChart.tsx` — renders court SVG + shot dots from `LOC_X`/`LOC_Y`
+- [ ] Add "Shot Chart" tab to `PlayerTabs.tsx`
+- [ ] Wire `ShotChart` into the new tab with a fetch from the shotchart endpoint
+- [ ] (Stretch) Color zones by FG% instead of individual dots — bin shots by `SHOT_ZONE_BASIC`
 
 ---
 
@@ -208,6 +267,7 @@ ghp-index/
 | Apr 1, 2026 | 6 | Updated PROJECT_BRIEF.md to reflect completed work; defined current sprint |
 | Apr 6, 2026 | 7 | Replaced all hardcoded API URLs with `process.env.API_URL`; fixed team page index mappings (wins/losses off-by-one due to undocumented TEAM_SLUG column); added division, conference rank, win%, since year to team hero; updated PROJECT_BRIEF.md |
 | Apr 6, 2026 | 8 | Total visual redesign (Uncodixfy): Slate Noir dark palette (`#0f172a`/`#1e293b`/`#38bdf8`); removed all white cards, oversized border radii, eyebrow labels, zebra stripes, shadow effects; NavBar active route highlighting; `<dl>/<dt>/<dd>` for hero info lists; `NBAPlayerProjection` styled to match; all 14 files updated |
+| Apr 8, 2026 | 9 | Projection endpoint built (`/api/players/{id}/projection`) with EWMA + linregress trend; `NBAPlayerProjection.tsx` completed with StatCard components; extended numeric columns added (FG%, 3P%, FT%, OREB/DREB, STL, BLK, TOV); team page roster panel refactored to 2-col scrollable grid alongside GameLog; identified `get_team_logs` bug; added Shot Chart heatmap sprint to PROJECT_BRIEF.md |
 
 ---
 
