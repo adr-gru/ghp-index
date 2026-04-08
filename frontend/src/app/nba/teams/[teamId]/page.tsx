@@ -160,11 +160,11 @@ export default async function TeamPage({ params }: TeamPageProps) {
         </dl>
       </div>
 
-      {/* Roster */}
-      <div>
-        <h2 className="text-xl font-bold text-[#f1f5f9] mb-4">Roster</h2>
-        <div className="overflow-x-auto">
-          <div className="flex gap-3 w-max pb-2">
+      {/* Roster + Game Log */}
+      <div className="flex gap-6 items-start">
+        <div>
+          <h2 className="text-xl font-bold text-[#f1f5f9] mb-4">Roster</h2>
+          <div className="grid grid-cols-2 gap-3 overflow-y-auto h-[380px] pr-1">
             {roster.map((player: { playerId: number; playerName: string; position: string; playerNumber: number }) => (
               <PlayerCard
                 key={player.playerId}
@@ -176,13 +176,12 @@ export default async function TeamPage({ params }: TeamPageProps) {
             ))}
           </div>
         </div>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-xl font-bold text-[#f1f5f9] mb-4">Last Games</h2>
+          <GameLog games={games} />
+        </div>
       </div>
 
-      {/* Game Log */}
-      <div>
-        <h2 className="text-xl font-bold text-[#f1f5f9] mb-4">Last Games</h2>
-        <GameLog games={games} />
-      </div>
     </div>
   );
 }
