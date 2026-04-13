@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import Image from "next/image";
 import { findStateAbr } from "@/utils/states";
 import { getTeamColor } from "@/utils/teamColors";
@@ -6,61 +10,85 @@ import GameLog from "@/components/GameLog";
 import TeamInfoNote from "@/components/TeamInfoNote";
 import ShotsFilter from "@/components/ShotsFilter";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-export async function generateMetadata({ params }: TeamPageProps) {
-  const { teamId } = await params;
+export default function TeamPage() {
+  const params = useParams();
+  const teamId = params.teamId as string;
+  const [team, setTeam] = useState<any>(null);
+  const [gamelog, setGamelog] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  try {
-    const response = await fetch(`${process.env.API_URL}/api/teams/${teamId}`, {
-      next: { revalidate: 1800 }, // Cache for 30 minutes
-      signal: AbortSignal.timeout(15000), // 15 second timeout
-    });
+  const fetchTeamData = async () => {
+    setLoading(true);
+    setError(null);
 
-    if (!response.ok) {
-      return { title: 'NBA Team | GHP-Index' };
+    try {
+      // Fetch team data with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
+
+      const teamResponse = await fetch(`${API_URL}/api/teams/${teamId}`, {
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!teamResponse.ok) {
+        throw new Error(`Failed to fetch team data: ${teamResponse.status}`);
+      }
+
+      const teamData = await teamResponse.json();
+      setTeam(teamData);
+
+      // Fetch gamelog (non-blocking)
+      try {
+        const gamelogController = new AbortController();
+        const gamelogTimeoutId = setTimeout(() => gamelogController.abort(), 20000);
+
+        const gamelogResponse = await fetch(`${API_URL}/api/${teamId}/teamgamelog/`, {
+          signal: gamelogController.signal,
+        });
+        clearTimeout(gamelogTimeoutId);
+
+        if (gamelogResponse.ok) {
+          const gamelogData = await gamelogResponse.json();
+          setGamelog(gamelogData);
+        }
+      } catch (err) {
+        console.error("Failed to fetch game log:", err);
+        // Don't fail the whole page if game log fails
+      }
+
+      setLoading(false);
+    } catch (err: any) {
+      console.error("Error fetching team data:", err);
+      setError(err.name === "AbortError" ? "Request timed out. The NBA API is slow." : "Failed to load team data.");
+      setLoading(false);
     }
+  };
 
-    const team = await response.json();
-    const city = team.info.resultSets[0].rowSet[0][2];
-    const name = team.info.resultSets[0].rowSet[0][3];
+  useEffect(() => {
+    fetchTeamData();
+  }, [teamId]);
 
-    return {
-      title: `${city} ${name} | GHP-Index`,
-    };
-  } catch (error) {
-    return { title: 'NBA Team | GHP-Index' };
+  if (loading) {
+    return <TeamPageSkeleton />;
   }
-}
 
-interface TeamPageProps {
-  params: Promise<{
-    teamId: string;
-  }>;
-}
-
-export default async function TeamPage({ params }: TeamPageProps) {
-  const { teamId } = await params;
-
-  let team, gamelog;
-
-  try {
-    const response = await fetch(`${process.env.API_URL}/api/teams/${teamId}`, {
-      next: { revalidate: 1800 }, // Cache for 30 minutes
-      signal: AbortSignal.timeout(15000), // 15 second timeout
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch team data: ${response.status}`);
-    }
-
-    team = await response.json();
-  } catch (error) {
-    console.error('Error fetching team data:', error);
+  if (error || !team) {
     return (
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="bg-card rounded-md border border-edge p-8 text-center">
-          <h1 className="text-2xl font-bold text-primary mb-2">Unable to load team data</h1>
-          <p className="text-secondary">The NBA API is currently unavailable. Please try again later.</p>
+        <div className="bg-card rounded-md border border-edge p-8 text-center space-y-4">
+          <div className="text-6xl">⚠️</div>
+          <h1 className="text-2xl font-bold text-primary">Unable to load team data</h1>
+          <p className="text-secondary">{error || "Unknown error occurred"}</p>
+          <button
+            onClick={fetchTeamData}
+            className="px-6 py-2 bg-accent text-white rounded-md font-medium hover:bg-blue-600 transition-colors"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
@@ -83,7 +111,7 @@ export default async function TeamPage({ params }: TeamPageProps) {
     divisionRank: team[13],
     minYear: team[14],
     maxYear: team[15],
-  }))
+  }));
 
   const teamRanks = team.info.resultSets[1].rowSet.map((team: string[]) => ({
     leagueId: team[0],
@@ -97,7 +125,7 @@ export default async function TeamPage({ params }: TeamPageProps) {
     assistsPerGame: team[8],
     opponentsPointRank: team[9],
     opponentsPointsPerGame: team[10],
-  }))
+  }));
 
   const computed = team.computed_stats ?? null;
   const { pointsPerGame, reboundsPerGame, assistsPerGame } = teamRanks[0] ?? {
@@ -124,18 +152,7 @@ export default async function TeamPage({ params }: TeamPageProps) {
     exp: player[12],
     school: player[13],
     playerId: player[14],
-  }))
-
-  try {
-    const gamelogResponse = await fetch(`${process.env.API_URL}/api/${teamId}/teamgamelog/`, {
-      next: { revalidate: 600 }, // Cache for 10 minutes
-      signal: AbortSignal.timeout(15000), // 15 second timeout
-    });
-    gamelog = gamelogResponse.ok ? await gamelogResponse.json() : null;
-  } catch (error) {
-    console.error('Error fetching game log:', error);
-    gamelog = null;
-  }
+  }));
 
   const games = (gamelog?.info.resultSets[0].rowSet ?? []).map((game: string[]) => ({
     teamId: game[0],
@@ -230,7 +247,13 @@ export default async function TeamPage({ params }: TeamPageProps) {
         </div>
         <div className="flex-1 min-w-0">
           <h2 className="text-xl font-bold text-primary mb-4">Last Games</h2>
-          <GameLog games={games} />
+          {games.length > 0 ? (
+            <GameLog games={games} />
+          ) : (
+            <div className="bg-card border border-edge rounded-md p-6 text-center text-secondary">
+              No recent games available
+            </div>
+          )}
         </div>
       </div>
 
@@ -238,7 +261,7 @@ export default async function TeamPage({ params }: TeamPageProps) {
       <div className="bg-card rounded-md border border-edge p-6">
         <h2 className="text-xl font-bold text-primary mb-6">Shot Chart</h2>
         <ShotsFilter
-          apiUrl={process.env.API_URL!}
+          apiUrl={API_URL}
           initialTeamId={teamId}
           players={roster.map((p: { playerId: number; playerName: string }) => ({
             id: p.playerId,
@@ -246,7 +269,46 @@ export default async function TeamPage({ params }: TeamPageProps) {
           }))}
         />
       </div>
+    </div>
+  );
+}
 
+function TeamPageSkeleton() {
+  return (
+    <div className="max-w-7xl mx-auto px-6 py-8 space-y-10 animate-pulse">
+      {/* Hero Skeleton */}
+      <div className="bg-card rounded-md border border-edge p-8 flex items-center gap-8">
+        <div className="w-32 h-32 bg-zinc-700 rounded-md shrink-0"></div>
+        <div className="flex-1 space-y-3">
+          <div className="h-10 bg-zinc-700 rounded w-1/2"></div>
+          <div className="h-6 bg-zinc-700 rounded w-1/3"></div>
+          <div className="flex gap-3 mt-4">
+            <div className="h-16 bg-zinc-700 rounded w-24"></div>
+            <div className="h-16 bg-zinc-700 rounded w-24"></div>
+            <div className="h-16 bg-zinc-700 rounded w-24"></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Roster + Games Skeleton */}
+      <div className="flex gap-6">
+        <div className="w-1/2">
+          <div className="h-8 bg-zinc-700 rounded w-32 mb-4"></div>
+          <div className="grid grid-cols-2 gap-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-24 bg-zinc-700 rounded"></div>
+            ))}
+          </div>
+        </div>
+        <div className="flex-1">
+          <div className="h-8 bg-zinc-700 rounded w-32 mb-4"></div>
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-16 bg-zinc-700 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
