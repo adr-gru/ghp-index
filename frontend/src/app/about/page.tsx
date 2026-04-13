@@ -18,13 +18,15 @@ export default function AboutPage() {
       {/* Developer Section */}
       <section className="bg-card border border-edge rounded-lg p-8">
         <div className="grid md:grid-cols-3 gap-8 items-center">
-          {/* Profile Photo Placeholder */}
+          {/* Profile Photo */}
           <div className="flex justify-center">
-            <div className="w-48 h-48 bg-base border-2 border-edge rounded-lg flex items-center justify-center">
-              <div className="text-center">
-                <p className="text-sm text-muted font-medium">Profile Photo</p>
-                <p className="text-xs text-muted mt-1">(Placeholder)</p>
-              </div>
+            <div className="relative w-48 h-48 rounded-lg overflow-hidden border-2 border-edge">
+              <Image
+                src="/images/about/profile.png"
+                alt="Adrian Grullon"
+                fill
+                className="object-cover"
+              />
             </div>
           </div>
 
@@ -151,19 +153,21 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Development Images Placeholders */}
+      {/* Development Images */}
       <section className="space-y-6">
         <h2 className="text-2xl font-bold text-primary">Development Journey</h2>
         <div className="grid md:grid-cols-3 gap-4">
           {[1, 2, 3].map((num) => (
             <div
               key={num}
-              className="aspect-video bg-base border-2 border-edge rounded-lg flex items-center justify-center"
+              className="relative aspect-video bg-base border-2 border-edge rounded-lg overflow-hidden"
             >
-              <div className="text-center">
-                <p className="text-sm text-muted font-medium">Development Image {num}</p>
-                <p className="text-xs text-muted mt-1">(Placeholder)</p>
-              </div>
+              <Image
+                src={`/images/about/dev-${num}.jpeg`}
+                alt={`Development screenshot ${num}`}
+                fill
+                className="object-cover"
+              />
             </div>
           ))}
         </div>
