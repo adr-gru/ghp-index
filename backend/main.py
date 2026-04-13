@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Query
-from typing import Literal
+from typing import Literal, Dict, Any, Optional, Tuple
 from fastapi.middleware.cors import CORSMiddleware
 from nba_api.stats.static import teams, players
 from nba_api.stats.endpoints import teaminfocommon, commonteamroster, commonplayerinfo, teamgamelog, playergamelog, shotchartdetail, scoreboardv2, leagueleaders, leaguestandingsv3, leaguegamefinder, playercareerstats
@@ -7,7 +7,6 @@ import pandas as pd
 import numpy as np
 from scipy import stats
 from datetime import datetime, timedelta
-from typing import Dict, Any, Optional
 import time
 
 app = FastAPI()
@@ -15,7 +14,7 @@ app = FastAPI()
 # Simple in-memory cache with TTL
 class Cache:
     def __init__(self):
-        self.cache: Dict[str, tuple[Any, datetime]] = {}
+        self.cache: Dict[str, Tuple[Any, datetime]] = {}
 
     def get(self, key: str, ttl_minutes: int = 30) -> Optional[Any]:
         if key in self.cache:
