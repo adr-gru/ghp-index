@@ -152,17 +152,25 @@ export default function PlayerCareer({ playerId, apiUrl }: PlayerCareerProps) {
   const stats = showPlayoffs ? careerData.playoffStats : careerData.seasonStats;
   const displayedStats = expanded ? stats : stats.slice(0, 5);
 
-  // Calculate career highs from season stats
-  const careerHighs = careerData.seasonStats.reduce((highs, season) => ({
-    pts: Math.max(highs.pts, season.pts),
-    reb: Math.max(highs.reb, season.reb),
-    ast: Math.max(highs.ast, season.ast),
-    stl: Math.max(highs.stl, season.stl),
-    blk: Math.max(highs.blk, season.blk),
-    fgPct: Math.max(highs.fgPct, season.fgPct),
-    fg3Pct: Math.max(highs.fg3Pct, season.fg3Pct),
-    ftPct: Math.max(highs.ftPct, season.ftPct),
-  }), { pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, fgPct: 0, fg3Pct: 0, ftPct: 0 });
+  // Calculate career highs from season stats (using per-game averages)
+  const careerHighs = careerData.seasonStats.reduce((highs, season) => {
+    const ppg = season.gp > 0 ? season.pts / season.gp : 0;
+    const rpg = season.gp > 0 ? season.reb / season.gp : 0;
+    const apg = season.gp > 0 ? season.ast / season.gp : 0;
+    const spg = season.gp > 0 ? season.stl / season.gp : 0;
+    const bpg = season.gp > 0 ? season.blk / season.gp : 0;
+
+    return {
+      pts: Math.max(highs.pts, ppg),
+      reb: Math.max(highs.reb, rpg),
+      ast: Math.max(highs.ast, apg),
+      stl: Math.max(highs.stl, spg),
+      blk: Math.max(highs.blk, bpg),
+      fgPct: Math.max(highs.fgPct, season.fgPct),
+      fg3Pct: Math.max(highs.fg3Pct, season.fg3Pct),
+      ftPct: Math.max(highs.ftPct, season.ftPct),
+    };
+  }, { pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, fgPct: 0, fg3Pct: 0, ftPct: 0 });
 
   // Calculate career averages
   const careerAvgs = {
