@@ -1,2 +1,13 @@
 # Personal notes (not for public repo)
 LEARNING_NOTES.md
+PROJECTIONS_GUIDE.md
+.DS_Store
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+
+# Environment variables (local only)
+.env.local
