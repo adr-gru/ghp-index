@@ -34,41 +34,47 @@ def get_players():
  
 @app.get("/api/teams/{team_id}")
 def get_team(team_id: int):
-    team_info = teaminfocommon.TeamInfoCommon(team_id=team_id)
-    roster = commonteamroster.CommonTeamRoster(team_id=team_id)
+    try:
+        team_info = teaminfocommon.TeamInfoCommon(team_id=team_id, timeout=10)
+        roster = commonteamroster.CommonTeamRoster(team_id=team_id, timeout=10)
 
-    info_dict = team_info.get_dict()
+        info_dict = team_info.get_dict()
 
-    # TeamSeasonRanks (resultSets[1]) goes empty post-season.
-    # Fall back to computing season averages from the game log.
-    computed_stats = None
-    if not info_dict["resultSets"][1]["rowSet"]:
-        log = teamgamelog.TeamGameLog(team_id=team_id)
-        log_data = log.get_dict()
-        log_rs = log_data["resultSets"][0]
-        rows = log_rs["rowSet"]
-        if rows:
-            df = pd.DataFrame(rows, columns=log_rs["headers"])
-            for col in ["PTS", "REB", "AST"]:
-                df[col] = pd.to_numeric(df[col])
-            computed_stats = {
-                "ppg": round(float(df["PTS"].mean()), 1),
-                "rpg": round(float(df["REB"].mean()), 1),
-                "apg": round(float(df["AST"].mean()), 1),
-            }
+        # TeamSeasonRanks (resultSets[1]) goes empty post-season.
+        # Fall back to computing season averages from the game log.
+        computed_stats = None
+        if not info_dict["resultSets"][1]["rowSet"]:
+            log = teamgamelog.TeamGameLog(team_id=team_id, timeout=10)
+            log_data = log.get_dict()
+            log_rs = log_data["resultSets"][0]
+            rows = log_rs["rowSet"]
+            if rows:
+                df = pd.DataFrame(rows, columns=log_rs["headers"])
+                for col in ["PTS", "REB", "AST"]:
+                    df[col] = pd.to_numeric(df[col])
+                computed_stats = {
+                    "ppg": round(float(df["PTS"].mean()), 1),
+                    "rpg": round(float(df["REB"].mean()), 1),
+                    "apg": round(float(df["AST"].mean()), 1),
+                }
 
-    return {
-        "info": info_dict,
-        "roster": roster.get_dict(),
-        "computed_stats": computed_stats,
-    }
+        return {
+            "info": info_dict,
+            "roster": roster.get_dict(),
+            "computed_stats": computed_stats,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"NBA API timeout or error: {str(e)}")
  
 @app.get("/api/players/{player_id}")
 def get_player(player_id: int):
-      player_info = commonplayerinfo.CommonPlayerInfo(player_id=player_id) 
-      return {
-        "info": player_info.get_dict()
-    }
+    try:
+        player_info = commonplayerinfo.CommonPlayerInfo(player_id=player_id, timeout=10)
+        return {
+            "info": player_info.get_dict()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"NBA API timeout or error: {str(e)}")
  
 @app.get("/api/{team_id}/teamgamelog/")
 def get_team_logs(team_id: int):
@@ -90,10 +96,13 @@ def get_team_logs(team_id: int):
     }
 @app.get("/api/players/{player_id}/playergamelog/")
 def get_player_game_logs(player_id: int):
-      player_stats = playergamelog.PlayerGameLog(player_id=player_id)
-      return {
-        "info": player_stats.get_dict()
-    }
+    try:
+        player_stats = playergamelog.PlayerGameLog(player_id=player_id, timeout=10)
+        return {
+            "info": player_stats.get_dict()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"NBA API timeout or error: {str(e)}")
 
 @app.get("/api/players/{player_id}/projection/")
 def get_player_projection(player_id: int):
@@ -146,12 +155,14 @@ def project_stat(col: str, recent: pd.DataFrame, df: pd.DataFrame) -> dict:
 
 @app.get("/api/players/{player_id}/career/")
 def get_player_career(player_id: int):
-    career_stats = playercareerstats.PlayerCareerStats(player_id=player_id)
-    data = career_stats.get_dict()
-
-    return {
-        "info": data
-    }
+    try:
+        career_stats = playercareerstats.PlayerCareerStats(player_id=player_id, timeout=10)
+        data = career_stats.get_dict()
+        return {
+            "info": data
+        }
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"NBA API timeout or error: {str(e)}")
 
 @app.get("/api/shots")
 def get_shots(
