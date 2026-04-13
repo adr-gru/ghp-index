@@ -3,59 +3,15 @@
 > **Last Updated:** April 13, 2026
 > **Project Owner:** Adrian G. (4th Year CS Student)
 > **Purpose:** Portfolio project + skill development
+> **Status:** 🟢 Deployed to Production
 
 ---
 
 ## Project Vision
 
-GHP-Index is a web application that aggregates and displays statistics from the four major North American sports leagues (NFL, NBA, MLB, NHL). Users can explore teams, rosters, individual player profiles, and game data. The app aims to eventually incorporate AI-powered analysis, projections, and player comparisons.
+GHP-Index is a web application that aggregates and displays statistics from the four major North American sports leagues (NFL, NBA, MLB, NHL). Users can explore teams, rosters, individual player profiles, and game data with AI-powered projections and player comparisons.
 
 **Design Target:** Modern, dark-themed, data-focused — clean access to stats without clutter.
-
----
-
-## Current Status
-
-### Completed
-- [x] Next.js + React 19 + TypeScript + Tailwind CSS 4 project initialized
-- [x] Python FastAPI backend with `nba_api` integration
-- [x] NBA team listing page — fetches all teams, displays as logo cards
-- [x] NBA team detail page — team info, record, conference, division, rankings, PPG/RPG/APG, roster grid, game log
-- [x] NBA player detail page — headshot, bio, season averages, game log via `PlayerTabs`
-- [x] Reusable components: `Header`, `NavBar`, `TeamCard`, `PlayerCard`, `GameLog`, `PlayerGameLog`, `PlayerTabs`, `TeamInfoNote`, `PlayerCareer`, `NBAPlayerComparison`
-- [x] Dynamic routing: `/nba/teams/[teamId]` and `/nba/players/[playerId]`
-- [x] League pages scaffolded: NBA, NFL, MLB, NHL (placeholders)
-- [x] Backend endpoints: `/api/teams`, `/api/teams/{id}`, `/api/players/{id}`, `/api/{team_id}/teamgamelog/`, `/api/players/{id}/playergamelog/`, `/api/players/{id}/career/`
-- [x] NBA CDN images working (team logos + player headshots)
-- [x] `Header` + `NavBar` moved into `layout.tsx` — no longer duplicated per page
-- [x] Complete visual refactor — cohesive dark theme with custom color palette (Slate Noir)
-- [x] All hardcoded `localhost:8000` URLs replaced with `process.env.API_URL` via `.env.local`
-- [x] nba_api array indices replaced with named mappings throughout team + player pages
-- [x] `PlayerTabs` component with Last Games, Projections, Shots, Career, and Compare tabs
-- [x] `/api/players/{id}/projection` endpoint — EWMA + linregress trend for PTS/REB/AST and extended stats
-- [x] `NBAPlayerProjection.tsx` — built out with StatCard, trend indicators, projection range
-- [x] `PlayerCareer.tsx` — comprehensive career stats with season-by-season table, career totals/averages, career highs, playoff toggle
-- [x] `NBAPlayerComparison.tsx` — side-by-side player comparison with search functionality and color-coded stat differentials
-- [x] Roster panel on team page — 2-column scrollable grid sized to match GameLog height
-- [x] Dashboard page — league hub cards, scoreboard, league leaders (PPG/RPG/APG tabs), standings (East/West tabs), NBA teams grid
-- [x] Backend endpoints: `/api/games/today` (`ScoreboardV2`), `/api/leaders?stat=` (`LeagueLeaders`), `/api/standings` (`LeagueStandingsV3`)
-- [x] `DashboardLeaders.tsx` + `DashboardStandings.tsx` — client components with tabbed UI
-- [x] Dashboard fetches all data with `Promise.allSettled` — graceful fallback if any endpoint fails
-- [x] Team page `teamRanks[0]` null guard — post-season `TeamInfoCommon` returns empty rankings
-- [x] Shot chart with filters — `ShotsFilter.tsx` component with player/team/context measure controls
-- [x] Percentage formatting — all FG%, 3P%, FT% properly displayed as percentages (45.6%) instead of decimals (0.456)
-- [x] Accessibility improvements — improved text contrast across all components for better readability
-- [x] Deployment preparation — CORS configuration, environment variable templates, .gitignore files, deployment documentation
-
-### In Progress
-- [ ] Deployment to production (Vercel + Render)
-
-### Known Issues (Fix Before Moving Forward)
-- [x] ~~Hardcoded backend URL~~ — replaced with `process.env.API_URL` via `.env.local`
-- [x] ~~Magic array indices~~ — team and player pages now use named mappings
-- [ ] **No error handling on team/player pages** — fetch calls crash when backend returns a non-JSON response. Dashboard page is already guarded via `Promise.allSettled`. Team/player pages still need `try/catch` + fallback UI.
-- [x] ~~No active link state~~ — NavBar now highlights active route via `usePathname`
-- [x] ~~`teamRanks[0]` crash~~ — guarded with `?? {}` fallback; occurs post-season when `TeamInfoCommon` returns empty rankings
 
 ---
 
@@ -63,14 +19,81 @@ GHP-Index is a web application that aggregates and displays statistics from the 
 
 | Layer | Technology | Purpose |
 |-------|------------|---------|
-| UI Library | React 19 | Component system, UI state |
-| Language | TypeScript | Typed JavaScript |
-| Framework | Next.js 16 (App Router) | Routing, server components, project structure |
+| Frontend | Next.js 16 (App Router) + React 19 | Routing, SSR/CSR, project structure |
+| Language | TypeScript | Type-safe development |
 | Styling | Tailwind CSS 4 | Utility-first CSS |
-| Backend | FastAPI (Python) | REST API serving NBA data |
-| Data Source | `nba_api` | Python library wrapping official NBA stats |
-| Database | TBD | |
-| AI Features | TBD | OpenAI or local models for projections/breakdowns |
+| Backend | FastAPI (Python) | REST API serving sports data |
+| Data Source | `nba_api` | Python library wrapping NBA stats API |
+| Deployment | Vercel (Frontend) + Railway (Backend) | Production hosting |
+| Caching | In-memory TTL cache | API response caching (30-60min) |
+
+---
+
+## Deployment
+
+**Production URLs:**
+- Frontend: `https://ghp-index.vercel.app`
+- Backend: `https://ghp-index-production.up.railway.app`
+
+**Environment Variables (Vercel):**
+```env
+API_URL=https://ghp-index-production.up.railway.app
+NEXT_PUBLIC_API_URL=https://ghp-index-production.up.railway.app
+```
+
+**Deployment Process:**
+1. Push to `main` branch on GitHub
+2. Vercel auto-deploys frontend (1-2 min)
+3. Railway auto-deploys backend (1-2 min)
+
+---
+
+## Current Status
+
+### ✅ Completed Features
+
+**Core Infrastructure:**
+- Next.js + React 19 + TypeScript + Tailwind CSS 4 setup
+- FastAPI backend with `nba_api` integration
+- Production deployment on Vercel + Railway
+- CORS configuration for production domains
+- Client-side rendering with skeleton loaders
+- Comprehensive error handling with retry mechanisms
+
+**Backend Reliability:**
+- In-memory caching system with configurable TTL (30-60min per endpoint)
+- Retry logic with exponential backoff (3 attempts)
+- Increased API timeouts (20 seconds)
+- Stale cache fallback for graceful degradation
+- Cache management endpoints (`/api/cache/stats`, `/api/cache/clear`)
+
+**NBA Features:**
+- Dashboard: scoreboard, league leaders, standings, team grid
+- Team pages: info, roster, game log, shot chart
+- Player pages: bio, stats, projections, career stats, comparison tool
+- Shot chart with filters (player/team/context controls)
+- Player comparison with side-by-side stats and color-coded differentials
+- Career stats: season-by-season table, totals/averages, career highs
+- AI projections: EWMA + trend analysis for next-game stats
+
+**UI/UX:**
+- Slate Noir dark theme with custom color palette
+- Skeleton loaders for all data-loading states
+- Retry buttons on all error states
+- Active route highlighting in navigation
+- Responsive design with mobile support
+- Proper contrast for accessibility
+
+**Data Quality Fixes:**
+- Career highs now show per-game averages (not season totals)
+- Career stats use complete data from NBA API
+- Percentage formatting (45.6% not 0.456)
+- Player comparison contrast improvements
+
+### 🔧 Known Issues
+
+**Minor:**
+- None currently blocking
 
 ---
 
@@ -78,235 +101,178 @@ GHP-Index is a web application that aggregates and displays statistics from the 
 
 ```
 ghp-index/
-├── frontend/
+├── frontend/                    # Next.js app (Vercel)
 │   ├── src/
 │   │   ├── app/
-│   │   │   ├── layout.tsx              # Root layout — Header + NavBar live here
-│   │   │   ├── page.tsx                # Dashboard — scoreboard, leaders, standings, team grid
-│   │   │   ├── globals.css
+│   │   │   ├── layout.tsx       # Root layout with Header + NavBar
+│   │   │   ├── page.tsx         # Dashboard (client-side)
 │   │   │   ├── nba/
-│   │   │   │   ├── page.tsx            # NBA teams listing — WORKING
-│   │   │   │   ├── teams/[teamId]/page.tsx    # Team detail + roster + game log + shot chart — WORKING
-│   │   │   │   └── players/[playerId]/page.tsx # Player profile + projections + shot chart — WORKING
-│   │   │   ├── nfl/page.tsx            # Placeholder
-│   │   │   ├── mlb/page.tsx            # Placeholder
-│   │   │   ├── nhl/page.tsx            # Placeholder
-│   │   │   └── players/page.tsx        # Unused
+│   │   │   │   ├── page.tsx     # NBA teams list (client-side)
+│   │   │   │   ├── teams/[teamId]/page.tsx    # Team detail (client-side)
+│   │   │   │   └── players/[playerId]/page.tsx # Player detail (client-side)
+│   │   │   ├── nfl/page.tsx     # Placeholder
+│   │   │   ├── mlb/page.tsx     # Placeholder
+│   │   │   └── nhl/page.tsx     # Placeholder
 │   │   ├── components/
 │   │   │   ├── Header.tsx
 │   │   │   ├── NavBar.tsx
 │   │   │   ├── TeamCard.tsx
 │   │   │   ├── PlayerCard.tsx
-│   │   │   ├── GameLog.tsx             # Expandable game stats table
-│   │   │   ├── PlayerGameLog.tsx
-│   │   │   ├── PlayerTabs.tsx          # Last Games / Projections / Shot Chart tabs
-│   │   │   ├── NBAPlayerProjection.tsx # EWMA + trend projection card
-│   │   │   ├── NBAPlayerComparison.tsx
-│   │   │   ├── ShotChart.tsx           # SVG court + shot dot heatmap
-│   │   │   ├── ShotsFilter.tsx         # Shot chart filter controls
-│   │   │   ├── TeamInfoNote.tsx
-│   │   │   ├── DashboardLeaders.tsx    # League leaders with PPG/RPG/APG tabs
-│   │   │   └── DashboardStandings.tsx  # Standings with East/West tabs
+│   │   │   ├── GameLog.tsx
+│   │   │   ├── PlayerTabs.tsx   # Last Games / Projections / Shots / Career / Compare
+│   │   │   ├── NBAPlayerProjection.tsx  # EWMA + trend projection
+│   │   │   ├── NBAPlayerComparison.tsx  # Side-by-side comparison
+│   │   │   ├── PlayerCareer.tsx          # Career stats with season table
+│   │   │   ├── ShotChart.tsx             # SVG court + shot heatmap
+│   │   │   ├── ShotsFilter.tsx           # Shot chart controls
+│   │   │   ├── DashboardLeaders.tsx      # League leaders widget
+│   │   │   └── DashboardStandings.tsx    # Standings widget
 │   │   └── utils/
-│   │       └── states.ts               # City → state mapping
-│   ├── public/
+│   │       ├── states.ts        # City → state mapping
+│   │       └── teamColors.ts    # Team color mappings
 │   └── package.json
-├── backend/
-│   ├── main.py                         # FastAPI app
+├── backend/                     # FastAPI app (Railway)
+│   ├── main.py                  # API endpoints + caching
 │   └── requirements.txt
-├── PROJECT_BRIEF.md
-└── LEARNING_NOTES.md
+└── PROJECT_BRIEF.md
 ```
 
 ---
 
-## Current Sprint
+## API Endpoints
 
-> **Goal:** Add error handling to team/player pages; then move to NBA Games view.
+**Teams:**
+- `GET /api/teams` - List all NBA teams (static data)
+- `GET /api/teams/{team_id}` - Team info, roster, stats (cached 30min)
+- `GET /api/{team_id}/teamgamelog/` - Team game log
 
-### Sprint Tasks (Priority Order)
+**Players:**
+- `GET /api/players` - List all NBA players (static data)
+- `GET /api/players/{player_id}` - Player info (cached 30min)
+- `GET /api/players/{player_id}/playergamelog/` - Player game log (cached 10min)
+- `GET /api/players/{player_id}/projection/` - AI projections (cached 10min)
+- `GET /api/players/{player_id}/career/` - Career stats (cached 60min)
 
-**Stability**
-- [ ] Add `try/catch` + fallback UI to team page fetch calls
-- [ ] Add `try/catch` + fallback UI to player page fetch calls
-- [ ] Add `try/except` in FastAPI endpoints to return JSON error responses instead of plain text 500s
+**Games & Stats:**
+- `GET /api/games/today` - Today's scores/games
+- `GET /api/games/recent` - Recent games
+- `GET /api/leaders?stat={stat}` - League leaders (PPG/RPG/APG)
+- `GET /api/standings` - Conference standings
+- `GET /api/shots` - Shot chart data with filters
 
-**Polish**
-- [ ] Add team page link on player page hero (city + team name → `/nba/teams/{teamId}`)
-
-**NBA Games View (next)**
-- [ ] Backend: `/api/games/{game_id}/boxscore` endpoint
-- [ ] Scores page with game cards linking to box score view
-
-
----
-
-## Sprint: Shot Chart Heatmap
-
-> **Goal:** Add a court heatmap to the player page showing shot location frequency and FG% by zone.
-
-### Background
-
-`nba_api` exposes `ShotChartDetail` which returns every shot attempt with `LOC_X`, `LOC_Y`, and made/missed status. This is the same data source the official NBA stats site uses for its shot charts.
-
-### Backend
-
-**New endpoint:** `/api/players/{player_id}/shotchart`
-
-```python
-from nba_api.stats.endpoints import shotchartdetail
-
-@app.get("/api/players/{player_id}/shotchart")
-def get_shot_chart(player_id: int):
-    chart = shotchartdetail.ShotChartDetail(
-        player_id=player_id,
-        team_id=0,
-        context_measure_simple="FGA"
-    )
-    data = chart.get_dict()
-    shots = data["resultSets"][0]
-    return {
-        "headers": shots["headers"],
-        "rows": shots["rowSet"]
-    }
-```
-
-Key columns returned: `LOC_X`, `LOC_Y`, `SHOT_MADE_FLAG`, `SHOT_ZONE_BASIC`, `SHOT_ZONE_AREA`, `SHOT_DISTANCE`
-
-### Frontend Options
-
-**Option A — Canvas/SVG heatmap (no extra deps)**
-- Render shot dots on an SVG court outline
-- Color by made (green) / missed (red), or opacity by density
-- Court outline is a static SVG asset or drawn with SVG primitives
-
-**Option B — `react-heatmap-grid` or `d3`**
-- Bin shots into zones, color by FG%
-- More work but looks more like the official NBA chart
-
-**Recommended starting point:** Option A with SVG dots — straightforward, no new library, visually clear.
-
-### Sprint Tasks (Priority Order)
-
-- [ ] Add `/api/players/{player_id}/shotchart` endpoint to `backend/main.py`
-- [ ] Create `ShotChart.tsx` — renders court SVG + shot dots from `LOC_X`/`LOC_Y`
-- [ ] Add "Shot Chart" tab to `PlayerTabs.tsx`
-- [ ] Wire `ShotChart` into the new tab with a fetch from the shotchart endpoint
-- [ ] (Stretch) Color zones by FG% instead of individual dots — bin shots by `SHOT_ZONE_BASIC`
+**Cache Management:**
+- `GET /api/cache/stats` - View cache statistics
+- `POST /api/cache/clear` - Clear all cache
+- `DELETE /api/cache/clear-old` - Remove stale entries
 
 ---
 
 ## Roadmap
 
-> **Strategy:** Finish NBA cleanly before expanding to other leagues.
+### ✅ Phase 1: NBA Core (Completed)
+- Team pages with roster and game logs
+- Player pages with stats and projections
+- Dashboard with scoreboard, leaders, standings
+- Shot charts with filtering
+- Career stats and player comparison
+- Production deployment
 
-### Phase 1: Clean Up ✅ (Mostly Done)
-1. ~~Move `Header` + `NavBar` into `layout.tsx`~~ ✅
-2. Add `.env.local` with `NEXT_PUBLIC_API_URL`
-3. Add `try/catch` and fallback UI to all fetch calls
-4. Define TypeScript interfaces for nba_api response shapes
-5. Fix player page birthday bug
-6. Add active link highlighting to NavBar
+### 🎯 Phase 2: Enhanced Features (Next Up)
 
-### Phase 2: NBA Player Pages (Current)
-1. Display player stats (season averages, career stats)
-2. "Last Games" table — recent game log with stat lines
-3. Display team name/link on player page
+**Priority 1: Data Quality**
+- [ ] Add loading indicators during data refresh
+- [ ] Implement stale-while-revalidate pattern
+- [ ] Add last-updated timestamps to cached data
 
-### Phase 3: NBA Games View
-1. Backend endpoint for recent/upcoming games
-2. Scores page with game cards
-3. Box score view for individual games
+**Priority 2: User Experience**
+- [ ] Search functionality (players + teams)
+- [ ] Bookmarks/favorites system
+- [ ] Recent views history
+- [ ] Shareable player/team links
 
-### Phase 4: NBA Dashboard ✅
-**Completed:**
-1. League hub cards — NBA/NFL/MLB/NHL nav cards (NFL/MLB/NHL greyed out, not yet built)
-2. NBA team grid — all 30 teams via `/api/teams` + `TeamCard`
-3. Scoreboard — today's matchups with scores via `/api/games/today` (`ScoreboardV2`)
-4. League leaders — top 10 PPG/RPG/APG (tabbed) via `/api/leaders` (`LeagueLeaders`)
-5. Standings — East/West conference table (tabbed) via `/api/standings` (`LeagueStandingsV3`)
+**Priority 3: Advanced Stats**
+- [ ] Box score view for individual games
+- [ ] Head-to-head matchup history
+- [ ] Advanced stats (PER, TS%, Usage Rate)
+- [ ] Trend analysis (hot/cold streaks)
 
-**Remaining:**
-6. Search across players and teams
+### Phase 3: Multi-League Expansion
+- [ ] Abstract NBA patterns into reusable components
+- [ ] Add NFL data source and pages
+- [ ] Add MLB data source and pages
+- [ ] Add NHL data source and pages
 
-### Phase 5: NBA Enhanced Features ✅ (Completed)
-1. ~~Player comparison tool (side-by-side stats)~~ ✅
-2. Team standings page (available on Dashboard)
-3. Season stat leaders (available on Dashboard)
-
-### Phase 6: AI Features (Next Up)
-**Player Projections:**
-1. Next-game stat projection (pts/reb/ast) based on recent game log trends
-2. Fantasy-style scoring projection output
-3. Surface projections on player page via existing `NBAPlayerProjection.tsx` component
-4. New backend endpoint: `/api/players/{id}/projection`
-
-**Future:**
-5. AI-powered game/performance breakdowns (narrative summaries)
-6. Trend analysis — hot/cold streaks, usage rate shifts
-
-### Phase 7: Expand to Other Leagues
-1. Abstract NBA patterns into reusable components
-2. Add NFL, MLB, NHL data sources
-3. Replicate team/player/games structure per league
+### Phase 4: AI Features
+- [ ] AI-powered game summaries
+- [ ] Performance breakdowns (narrative analysis)
+- [ ] Fantasy scoring projections
+- [ ] Injury impact analysis
 
 ---
 
 ## Development Guidelines
 
-1. **Fix known issues before adding features** — don't build on a shaky foundation
-2. **TypeScript properly** — define interfaces for all API response shapes
-3. **Component-based** — small, reusable, single-responsibility components
-4. **No magic numbers** — if accessing array indices from nba_api, name the index with a comment or constant
-5. **Environment variables** — never hardcode URLs or secrets
-6. **Error handling at boundaries** — wrap all fetch calls, show fallback UI on failure
-7. **Mobile-first responsive design** with Tailwind
+**Architecture:**
+1. Client-side rendering for all dynamic pages
+2. Skeleton loaders for every loading state
+3. Error boundaries with retry buttons
+4. Environment variables for all external URLs
+5. TypeScript interfaces for all API responses
 
-### Coding Preferences
-- Functional components (no class components)
+**Code Quality:**
+- Functional components only (no class components)
 - Tailwind for all styling (no CSS modules)
-- Next.js App Router patterns (async server components for data fetching)
-- Keep business logic out of UI components
+- Small, single-responsibility components
+- Named constants instead of magic numbers
+- Comprehensive error handling at API boundaries
+
+**Performance:**
+- Backend caching to reduce API load
+- Client-side fetch timeouts (15-20s)
+- Retry logic with exponential backoff
+- Graceful degradation when APIs fail
 
 ---
 
 ## Session Log
 
-| Date | Session | Changes |
-|------|---------|---------|
-| Jan 29, 2026 | 1 | Project scaffolded, PROJECT_BRIEF.md created, NBA-first approach decided |
-| Jan 29, 2026 | 1 | NBA dashboard skeleton, FastAPI backend, `/api/teams` endpoint |
-| Feb 4, 2026 | 2 | Reusable components: Header, NavBar, TeamCard; dynamic `[teamId]` routing |
-| Feb 4, 2026 | 2 | `/api/teams/{team_id}` endpoint; frontend connected to backend |
-| Feb 4, 2026 | 2 | All league pages scaffolded (NFL, MLB, NHL placeholders) |
-| ~Feb, 2026 | 3 | PlayerCard component, `/nba/players/[playerId]` page, player headshots |
-| Mar 2, 2026 | 4 | Project review — identified known issues, revised and updated PROJECT_BRIEF.md |
-| Mar–Apr, 2026 | 5 | Header/NavBar moved to layout.tsx; GameLog component + team game log; complete visual refactor |
-| Apr 1, 2026 | 6 | Updated PROJECT_BRIEF.md to reflect completed work; defined current sprint |
-| Apr 6, 2026 | 7 | Replaced all hardcoded API URLs with `process.env.API_URL`; fixed team page index mappings (wins/losses off-by-one due to undocumented TEAM_SLUG column); added division, conference rank, win%, since year to team hero; updated PROJECT_BRIEF.md |
-| Apr 6, 2026 | 8 | Total visual redesign (Uncodixfy): Slate Noir dark palette (`#0f172a`/`#1e293b`/`#38bdf8`); removed all white cards, oversized border radii, eyebrow labels, zebra stripes, shadow effects; NavBar active route highlighting; `<dl>/<dt>/<dd>` for hero info lists; `NBAPlayerProjection` styled to match; all 14 files updated |
-| Apr 8, 2026 | 9 | Projection endpoint built (`/api/players/{id}/projection`) with EWMA + linregress trend; `NBAPlayerProjection.tsx` completed with StatCard components; extended numeric columns added (FG%, 3P%, FT%, OREB/DREB, STL, BLK, TOV); team page roster panel refactored to 2-col scrollable grid alongside GameLog; identified `get_team_logs` bug; added Shot Chart heatmap sprint to PROJECT_BRIEF.md |
-| Apr 13, 2026 | 10 | Dashboard page built (Phase 4): league hub cards, scoreboard, league leaders (PPG/RPG/APG tabs), standings (East/West tabs), NBA teams grid; 3 new backend endpoints (`/api/games/today`, `/api/leaders`, `/api/standings`); `DashboardLeaders.tsx` + `DashboardStandings.tsx` client components; `Promise.allSettled` for graceful per-section error handling; fixed team page crash when `teamRanks[0]` is undefined post-season |
-| Apr 13, 2026 | 11 | **Player page completion:** Career tab implemented with season-by-season stats table, career totals/averages widgets, career highs section, playoff toggle; Player comparison tab with search functionality and color-coded stat differentials; `/api/players/{id}/career/` endpoint added; percentage formatting fixed across all components (FG%, 3P%, FT%); accessibility improvements with better text contrast for light/dark backgrounds; deployment preparation: CORS config for production, .gitignore files, environment variable templates, deployment documentation (DEPLOYMENT.md), Render/Vercel config files |
+| Date | Session | Major Changes |
+|------|---------|---------------|
+| Jan 29, 2026 | 1 | Project scaffolded, NBA-first approach decided |
+| Feb 4, 2026 | 2 | Core routing, team/player pages, FastAPI backend |
+| Mar–Apr, 2026 | 3-6 | Visual refactor, GameLog, environment variables |
+| Apr 6, 2026 | 7-8 | Slate Noir theme, NavBar improvements |
+| Apr 8, 2026 | 9 | Projections endpoint, shot charts |
+| Apr 13, 2026 | 10 | Dashboard with scoreboard/leaders/standings |
+| Apr 13, 2026 | 11 | Career stats, player comparison |
+| Apr 13, 2026 | 12 | **Production deployment & reliability:** Backend caching with TTL (30-60min), retry logic with exponential backoff, 20s timeouts, stale cache fallback; Frontend converted to CSR with skeleton loaders, error states with retry buttons; Fixed career stats bugs (highs showing totals vs averages, incomplete game data); Fixed player comparison contrast; Deployed to Vercel + Railway |
 
 ---
 
 ## Quick Start
 
+**Local Development:**
 ```bash
 # Frontend
 cd frontend
 npm install
+echo "NEXT_PUBLIC_API_URL=https://ghp-index-production.up.railway.app" > .env.local
 npm run dev
-# Runs at http://localhost:3000
+# → http://localhost:3000
 
 # Backend
 cd backend
-source venv/bin/activate
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt
 uvicorn main:app --reload
-# Runs at http://localhost:8000
+# → http://localhost:8000
 ```
+
+**Testing Production:**
+- Frontend: https://ghp-index.vercel.app
+- Backend API: https://ghp-index-production.up.railway.app/api/teams
 
 ---
 
-*Update this file when making significant changes. Add a row to the Session Log each session.*
+*Update this file after significant changes. Add session log entries after each work session.*
