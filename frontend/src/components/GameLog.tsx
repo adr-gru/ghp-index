@@ -37,9 +37,9 @@ export default function GameLog({ games }: { games: Game[] }) {
       <div className="overflow-x-auto">
         <table className="text-sm text-left w-full">
           <thead>
-            <tr className="bg-base border-b border-edge">
+            <tr className="bg-zinc-800 border-b border-edge">
               {["Date", "Matchup", "W/L", "MIN", "PTS", "REB", "AST", "STL", "BLK", "TOV", "FGM", "FGA", "FG%", "3PM", "3PA", "3P%", "FTM", "FTA", "FT%", "OREB", "DREB", "PF"].map((h) => (
-                <th key={h} className="px-4 py-3 text-xs font-medium text-secondary whitespace-nowrap">{h}</th>
+                <th key={h} className="px-4 py-3 text-xs font-medium text-zinc-300 whitespace-nowrap uppercase tracking-wider">{h}</th>
               ))}
             </tr>
           </thead>
@@ -73,10 +73,10 @@ export default function GameLog({ games }: { games: Game[] }) {
           </tbody>
         </table>
       </div>
-      <div className="px-4 py-3 bg-base border-t border-edge">
+      <div className="px-4 py-3 bg-zinc-800 border-t border-edge">
         <button
           onClick={() => setExpanded(!expanded)}
-          className="text-sm font-medium text-accent hover:text-primary transition-colors"
+          className="text-sm font-medium text-accent hover:text-blue-400 transition-colors"
         >
           {expanded ? "Show less" : `Show all ${games.length} games`}
         </button>

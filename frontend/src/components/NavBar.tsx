@@ -14,7 +14,7 @@ export default function NavBar() {
   const pathname = usePathname();
 
   return (
-    <nav className="bg-card border-b border-edge">
+    <nav className="bg-[#1e293b] border-b border-[#334155]">
       <div className="max-w-7xl mx-auto px-6 flex gap-1">
         {leagues.map(({ label, href }) => {
           const isActive = pathname.startsWith(href);
@@ -24,8 +24,8 @@ export default function NavBar() {
               href={href}
               className={`text-sm font-medium px-3 py-3 border-b-2 transition-colors ${
                 isActive
-                  ? "text-accent border-accent"
-                  : "text-secondary border-transparent hover:text-primary"
+                  ? "text-white border-white"
+                  : "text-slate-400 border-transparent hover:text-white"
               }`}
             >
               {label}

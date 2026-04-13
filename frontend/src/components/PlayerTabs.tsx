@@ -4,6 +4,8 @@ import { useState } from "react";
 import PlayerGameLog from "@/components/PlayerGameLog";
 import NBAPlayerProjection from "@/components/NBAPlayerProjection";
 import ShotsFilter from "@/components/ShotsFilter";
+import PlayerCareer from "@/components/PlayerCareer";
+import NBAPlayerComparison from "@/components/NBAPlayerComparison";
 
 interface PlayerStats {
   playerStatsDate: string;
@@ -56,12 +58,16 @@ export default function PlayerTabs({
   playerId,
   teamId,
   apiUrl,
+  playerName,
+  teamColor,
 }: {
   stats: PlayerStats[];
   projection: ProjectionData;
   playerId: number;
   teamId: number;
   apiUrl: string;
+  playerName: string;
+  teamColor: string;
 }) {
   const [activeTab, setActiveTab] = useState("Last Games");
 
@@ -85,12 +91,18 @@ export default function PlayerTabs({
 
       {/* Tab Content */}
       {activeTab === "Last Games" && <PlayerGameLog stats={stats} />}
-      {activeTab === "Projections" && <NBAPlayerProjection projection={projection} />}
+      {activeTab === "Projections" && <NBAPlayerProjection projection={projection} teamColor={teamColor} />}
       {activeTab === "Shots" && (
         <ShotsFilter apiUrl={apiUrl} initialPlayerId={String(playerId)} initialTeamId={String(teamId)} />
       )}
-      {activeTab === "Career" && <div>Career coming soon</div>}
-      {activeTab === "Compare" && <div>Comparisons coming soon</div>}
+      {activeTab === "Career" && <PlayerCareer playerId={playerId} apiUrl={apiUrl} />}
+      {activeTab === "Compare" && (
+        <NBAPlayerComparison
+          currentPlayerId={playerId}
+          currentPlayerName={playerName}
+          apiUrl={apiUrl}
+        />
+      )}
     </div>
   );
 }

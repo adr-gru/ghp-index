@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { getTeamColor } from "@/utils/teamColors";
 import TeamInfoNote from "@/components/TeamInfoNote";
 import PlayerTabs from "@/components/PlayerTabs";
 
@@ -58,6 +59,7 @@ export default async function PlayerPage({ params }: PlayerPageProps) {
     rebounds: player[5],
   }));
   const { name, birthday, school, country, teamName, city, height, weight, jersey, position, rosterStatus, draftYear } = playerInfo[0];
+  const teamColor = getTeamColor(playerInfo[0].team);
 
   const [playerlogResponse, projectionResponse] = await Promise.all([
     fetch(`${process.env.API_URL}/api/players/${playerId}/playergamelog/`),
@@ -101,7 +103,7 @@ export default async function PlayerPage({ params }: PlayerPageProps) {
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-10">
       {/* Player Hero */}
-      <div className="bg-card rounded-md border border-edge p-8 flex items-start gap-8">
+      <div className="bg-card rounded-md border border-edge p-8 flex items-start gap-8" style={{ borderTopColor: teamColor }}>
         <div className="overflow-hidden shrink-0">
           <div className="relative w-40 h-32">
             <Image
@@ -116,12 +118,12 @@ export default async function PlayerPage({ params }: PlayerPageProps) {
           <h1 className="text-4xl font-bold text-primary tracking-tight mb-1">{name}</h1>
           <p className="text-sm text-secondary mb-4">{city} {teamName} · #{jersey} · {position}</p>
           <div className="flex gap-3">
-            <TeamInfoNote title="Points" info={points ?? "—"} />
-            <TeamInfoNote title="Assists" info={assists ?? "—"} />
-            <TeamInfoNote title="Rebounds" info={rebounds ?? "—"} />
+            <TeamInfoNote title="Points" info={points ?? "—"} teamColor={teamColor} />
+            <TeamInfoNote title="Assists" info={assists ?? "—"} teamColor={teamColor} />
+            <TeamInfoNote title="Rebounds" info={rebounds ?? "—"} teamColor={teamColor} />
           </div>
         </div>
-        <div className="h-40 w-px bg-edge ml-auto"></div>
+        <div className="h-40 w-px ml-auto" style={{ backgroundColor: teamColor, opacity: 0.4 }}></div>
         <dl className="flex flex-col gap-1.5 text-sm shrink-0">
           <div className="flex gap-2">
             <dt className="text-secondary">Birthdate</dt>
@@ -155,7 +157,7 @@ export default async function PlayerPage({ params }: PlayerPageProps) {
       </div>
 
       <div>
-        <PlayerTabs stats={playerLogs} projection={projection} playerId={Number(playerId)} teamId={Number(playerInfo[0].team)} apiUrl={process.env.API_URL!} />
+        <PlayerTabs stats={playerLogs} projection={projection} playerId={Number(playerId)} teamId={Number(playerInfo[0].team)} apiUrl={process.env.API_URL!} playerName={name} teamColor={teamColor} />
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { findStateAbr } from "@/utils/states";
+import { getTeamColor } from "@/utils/teamColors";
 import PlayerCard from "@/components/PlayerCard";
 import GameLog from "@/components/GameLog";
 import TeamInfoNote from "@/components/TeamInfoNote";
@@ -70,6 +71,7 @@ export default async function TeamPage({ params }: TeamPageProps) {
     assistsPerGame: computed?.apg ?? "—",
   };
   const { city, teamName, wins, losses, teamAbr, conference, teamDivision, divisionRank, conferenceRank, minYear } = teamInfo[0] ?? {};
+  const teamColor = getTeamColor(teamId);
   const record = `${wins}–${losses}`;
   const location = `${city}, ${findStateAbr(city)}`;
   const roster = team.roster.resultSets[0].rowSet.map((player: string[]) => ({
@@ -124,7 +126,7 @@ export default async function TeamPage({ params }: TeamPageProps) {
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-10">
       {/* Team Hero */}
-      <div className="bg-card rounded-md border border-edge p-8 flex items-center gap-8">
+      <div className="bg-card rounded-md border border-edge p-8 flex items-center gap-8" style={{ borderTopColor: teamColor }}>
         <div className="relative w-32 h-32 shrink-0">
           <Image
             src={`https://cdn.nba.com/logos/nba/${teamId}/primary/L/logo.svg`}
@@ -136,12 +138,12 @@ export default async function TeamPage({ params }: TeamPageProps) {
           <h1 className="text-4xl font-bold text-primary tracking-tight">{city} {teamName}</h1>
           <p className="text-secondary font-medium mt-1">{record} · {teamAbr} · {conference}</p>
           <div className="flex gap-3 mt-4">
-            <TeamInfoNote title="Points" info={pointsPerGame} />
-            <TeamInfoNote title="Assists" info={assistsPerGame} />
-            <TeamInfoNote title="Rebounds" info={reboundsPerGame} />
+            <TeamInfoNote title="Points" info={pointsPerGame} teamColor={teamColor} />
+            <TeamInfoNote title="Assists" info={assistsPerGame} teamColor={teamColor} />
+            <TeamInfoNote title="Rebounds" info={reboundsPerGame} teamColor={teamColor} />
           </div>
         </div>
-        <div className="h-40 w-px bg-edge ml-auto"></div>
+        <div className="h-40 w-px ml-auto" style={{ backgroundColor: teamColor, opacity: 0.4 }}></div>
         <dl className="flex flex-col gap-1.5 text-sm shrink-0">
           <div className="flex gap-2">
             <dt className="text-secondary">Location</dt>

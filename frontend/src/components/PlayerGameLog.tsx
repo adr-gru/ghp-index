@@ -57,7 +57,7 @@ export default function PlayerGameLog({ stats }: { stats: PlayerStats[] }) {
       <div className="flex flex-col gap-2">
         {aggregates.map(({ label, value }) => (
           <div key={label} className="bg-card border border-edge rounded-md px-4 py-2 text-center min-w-[60px]">
-            <div className="text-xs text-secondary font-medium">{label}</div>
+            <div className="text-xs text-muted font-medium uppercase tracking-wide">{label}</div>
             <div className="text-lg font-bold text-primary">{value}</div>
           </div>
         ))}
@@ -67,9 +67,9 @@ export default function PlayerGameLog({ stats }: { stats: PlayerStats[] }) {
         <div className="overflow-x-auto">
           <table className="text-sm text-left w-full">
             <thead>
-              <tr className="bg-base border-b border-edge">
+              <tr className="bg-zinc-800 border-b border-edge">
                 {["Date", "Matchup", "W/L", "MIN", "PTS", "REB", "AST", "STL", "BLK", "TOV", "FGM", "FGA", "FG%", "3PM", "3PA", "3P%", "FTM", "FTA", "FT%", "OREB", "DREB", "PF"].map((h) => (
-                  <th key={h} className="px-4 py-3 text-xs font-medium text-secondary whitespace-nowrap">{h}</th>
+                  <th key={h} className="px-4 py-3 text-xs font-medium text-zinc-300 whitespace-nowrap uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -103,7 +103,7 @@ export default function PlayerGameLog({ stats }: { stats: PlayerStats[] }) {
             </tbody>
           </table>
         </div>
-        <div className="px-4 py-3 bg-base border-t border-edge">
+        <div className="px-4 py-3 bg-zinc-800 border-t border-edge">
           <button
             onClick={() => setExpanded(!expanded)}
             className="text-sm font-medium text-accent hover:text-primary transition-colors"
