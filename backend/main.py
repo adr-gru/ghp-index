@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Query
 from typing import Literal
 from fastapi.middleware.cors import CORSMiddleware
 from nba_api.stats.static import teams, players
-from nba_api.stats.endpoints import teaminfocommon, commonteamroster, commonplayerinfo, teamgamelog, playergamelog, shotchartdetail, scoreboardv2, leagueleaders, leaguestandingsv3, leaguegamefinder
+from nba_api.stats.endpoints import teaminfocommon, commonteamroster, commonplayerinfo, teamgamelog, playergamelog, shotchartdetail, scoreboardv2, leagueleaders, leaguestandingsv3, leaguegamefinder, playercareerstats
 import pandas as pd
 import numpy as np
 from scipy import stats
@@ -137,6 +137,15 @@ def project_stat(col: str, recent: pd.DataFrame, df: pd.DataFrame) -> dict:
             "season_avg": round(season_avg, 1),
             "trend": trend,
         }
+
+@app.get("/api/players/{player_id}/career/")
+def get_player_career(player_id: int):
+    career_stats = playercareerstats.PlayerCareerStats(player_id=player_id)
+    data = career_stats.get_dict()
+
+    return {
+        "info": data
+    }
 
 @app.get("/api/shots")
 def get_shots(
