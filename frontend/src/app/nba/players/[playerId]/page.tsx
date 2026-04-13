@@ -1,34 +1,103 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import Image from "next/image";
 import { getTeamColor } from "@/utils/teamColors";
 import TeamInfoNote from "@/components/TeamInfoNote";
 import PlayerTabs from "@/components/PlayerTabs";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-export async function generateMetadata({ params }: PlayerPageProps) {
-  const { playerId } = await params;
-  const response = await fetch(`${process.env.API_URL}/api/players/${playerId}`);
-  const player = await response.json();
+export default function PlayerPage() {
+  const params = useParams();
+  const playerId = params.playerId as string;
+  const [player, setPlayer] = useState<any>(null);
+  const [playerlog, setPlayerlog] = useState<any>(null);
+  const [projection, setProjection] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const name = player.info.resultSets[0].rowSet[0][3];
+  const fetchPlayerData = async () => {
+    setLoading(true);
+    setError(null);
 
+    try {
+      // Fetch player info with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20000);
 
-  return {
-    title: `${name} | GHP-Index`,
+      const playerResponse = await fetch(`${API_URL}/api/players/${playerId}`, {
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!playerResponse.ok) {
+        throw new Error(`Failed to fetch player data: ${playerResponse.status}`);
+      }
+
+      const playerData = await playerResponse.json();
+      setPlayer(playerData);
+
+      // Fetch game logs and projections in parallel (non-blocking)
+      try {
+        const [playerlogResponse, projectionResponse] = await Promise.all([
+          fetch(`${API_URL}/api/players/${playerId}/playergamelog/`, {
+            signal: AbortSignal.timeout(20000),
+          }).catch(() => null),
+          fetch(`${API_URL}/api/players/${playerId}/projection/`, {
+            signal: AbortSignal.timeout(20000),
+          }).catch(() => null),
+        ]);
+
+        if (playerlogResponse?.ok) {
+          const playerlogData = await playerlogResponse.json();
+          setPlayerlog(playerlogData);
+        }
+
+        if (projectionResponse?.ok) {
+          const projectionData = await projectionResponse.json();
+          setProjection(projectionData);
+        }
+      } catch (err) {
+        console.error("Failed to fetch player stats:", err);
+        // Don't fail the whole page if stats fail
+      }
+
+      setLoading(false);
+    } catch (err: any) {
+      console.error("Error fetching player data:", err);
+      setError(err.name === "AbortError" ? "Request timed out. The NBA API is slow." : "Failed to load player data.");
+      setLoading(false);
+    }
   };
 
-}
+  useEffect(() => {
+    fetchPlayerData();
+  }, [playerId]);
 
-interface PlayerPageProps {
-  params: Promise<{
-    playerId: string;
-  }>;
-}
+  if (loading) {
+    return <PlayerPageSkeleton />;
+  }
 
-export default async function PlayerPage({ params }: PlayerPageProps) {
-  const { playerId } = await params;
+  if (error || !player) {
+    return (
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="bg-card rounded-md border border-edge p-8 text-center space-y-4">
+          <div className="text-6xl">⚠️</div>
+          <h1 className="text-2xl font-bold text-primary">Unable to load player data</h1>
+          <p className="text-secondary">{error || "Unknown error occurred"}</p>
+          <button
+            onClick={fetchPlayerData}
+            className="px-6 py-2 bg-accent text-white rounded-md font-medium hover:bg-blue-600 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-  const response = await fetch(`${process.env.API_URL}/api/players/${playerId}`);
-  const player = await response.json();
   const playerInfo = player.info.resultSets[0].rowSet.map((player: string[]) => ({
     personId: player[0],
     firstName: player[1],
@@ -53,20 +122,16 @@ export default async function PlayerPage({ params }: PlayerPageProps) {
     draftRound: player[30],
     draftNumber: player[31],
   }));
+
   const playerHeadlineStats = player.info.resultSets[1].rowSet.map((player: string[]) => ({
     points: player[3],
     assists: player[4],
     rebounds: player[5],
   }));
+
   const { name, birthday, school, country, teamName, city, height, weight, jersey, position, rosterStatus, draftYear } = playerInfo[0];
   const teamColor = getTeamColor(playerInfo[0].team);
 
-  const [playerlogResponse, projectionResponse] = await Promise.all([
-    fetch(`${process.env.API_URL}/api/players/${playerId}/playergamelog/`),
-    fetch(`${process.env.API_URL}/api/players/${playerId}/projection/`),
-  ]);
-  const playerlog = playerlogResponse.ok ? await playerlogResponse.json() : null;
-  const projection = projectionResponse.ok ? await projectionResponse.json() : null;
   const playerLogs = (playerlog?.info.resultSets[0].rowSet ?? []).map((game: string[]) => ({
     playerStatsDate: game[3],
     matchup: game[4],
@@ -98,7 +163,6 @@ export default async function PlayerPage({ params }: PlayerPageProps) {
     assists: null,
     rebounds: null,
   };
-
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-10">
@@ -157,7 +221,54 @@ export default async function PlayerPage({ params }: PlayerPageProps) {
       </div>
 
       <div>
-        <PlayerTabs stats={playerLogs} projection={projection} playerId={Number(playerId)} teamId={Number(playerInfo[0].team)} apiUrl={process.env.API_URL!} playerName={name} teamColor={teamColor} />
+        <PlayerTabs
+          stats={playerLogs}
+          projection={projection}
+          playerId={Number(playerId)}
+          teamId={Number(playerInfo[0].team)}
+          apiUrl={API_URL}
+          playerName={name}
+          teamColor={teamColor}
+        />
+      </div>
+    </div>
+  );
+}
+
+function PlayerPageSkeleton() {
+  return (
+    <div className="max-w-7xl mx-auto px-6 py-8 space-y-10 animate-pulse">
+      {/* Hero Skeleton */}
+      <div className="bg-card rounded-md border border-edge p-8 flex items-start gap-8">
+        <div className="w-40 h-32 bg-zinc-700 rounded-md shrink-0"></div>
+        <div className="flex-1 space-y-3">
+          <div className="h-10 bg-zinc-700 rounded w-1/2"></div>
+          <div className="h-6 bg-zinc-700 rounded w-1/3"></div>
+          <div className="flex gap-3 mt-4">
+            <div className="h-16 bg-zinc-700 rounded w-24"></div>
+            <div className="h-16 bg-zinc-700 rounded w-24"></div>
+            <div className="h-16 bg-zinc-700 rounded w-24"></div>
+          </div>
+        </div>
+        <div className="space-y-2">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="h-6 bg-zinc-700 rounded w-32"></div>
+          ))}
+        </div>
+      </div>
+
+      {/* Tabs Skeleton */}
+      <div className="space-y-4">
+        <div className="flex gap-4 border-b border-edge pb-2">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-8 bg-zinc-700 rounded w-24"></div>
+          ))}
+        </div>
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-20 bg-zinc-700 rounded"></div>
+          ))}
+        </div>
       </div>
     </div>
   );
