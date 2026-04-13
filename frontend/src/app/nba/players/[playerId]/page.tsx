@@ -151,7 +151,7 @@ export default async function PlayerPage({ params }: PlayerPageProps) {
       </div>
 
       <div>
-        <PlayerTabs stats={playerLogs} projection={projection} />
+        <PlayerTabs stats={playerLogs} projection={projection} playerId={Number(playerId)} teamId={Number(playerInfo[0].team)} apiUrl={process.env.API_URL!} />
       </div>
     </div>
   );

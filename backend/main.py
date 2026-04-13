@@ -1,7 +1,8 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
+from typing import Literal
 from fastapi.middleware.cors import CORSMiddleware
 from nba_api.stats.static import teams, players
-from nba_api.stats.endpoints import teaminfocommon, commonteamroster, commonplayerinfo, teamgamelog, playergamelog
+from nba_api.stats.endpoints import teaminfocommon, commonteamroster, commonplayerinfo, teamgamelog, playergamelog, shotchartdetail
 import pandas as pd
 import numpy as np
 from scipy import stats
@@ -118,3 +119,40 @@ def project_stat(col: str, recent: pd.DataFrame, df: pd.DataFrame) -> dict:
             "season_avg": round(season_avg, 1),
             "trend": trend,
         }
+
+@app.get("/api/shots")
+def get_shots(
+    player_id: int = 0,
+    team_id: int = 0,
+    context: Literal["FGA", "FG3A", "FTA", "FG3M", "FGM", "FTM", "BLKA", "DUNK_FGM", "DUNK_FGA"] = Query(
+        default="FGA", description="Shot context measure"
+    ),
+):
+    if player_id == 0 and team_id == 0:
+        raise HTTPException(status_code=400, detail="Provide at least a player_id or team_id")
+
+    shot_data = shotchartdetail.ShotChartDetail(
+        player_id=player_id,
+        team_id=team_id,
+        context_measure_simple=context,
+    )
+    data = shot_data.get_dict()
+    result_set = data["resultSets"][0]
+    rows = result_set["rowSet"]
+
+    shots = [
+        {
+            "x": row[17],           # LOC_X
+            "y": row[18],           # LOC_Y
+            "made": row[20] == 1,   # SHOT_MADE_FLAG (int 0/1)
+            "player": row[4],       # PLAYER_NAME
+            "team_name": row[6],    # TEAM_NAME
+            "action_type": row[11], # ACTION_TYPE
+            "shot_type": row[12],   # SHOT_TYPE
+            "zone": row[13],        # SHOT_ZONE_BASIC
+            "distance": row[16],    # SHOT_DISTANCE
+        }
+        for row in rows
+    ]
+
+    return {"shots": shots, "count": len(shots)}

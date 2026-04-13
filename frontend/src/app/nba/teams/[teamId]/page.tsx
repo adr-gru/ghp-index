@@ -3,6 +3,7 @@ import { findStateAbr } from "@/utils/states";
 import PlayerCard from "@/components/PlayerCard";
 import GameLog from "@/components/GameLog";
 import TeamInfoNote from "@/components/TeamInfoNote";
+import ShotsFilter from "@/components/ShotsFilter";
 
 
 export async function generateMetadata({ params }: TeamPageProps) {
@@ -163,7 +164,7 @@ export default async function TeamPage({ params }: TeamPageProps) {
       {/* Roster + Game Log */}
       <div className="flex gap-6 items-start">
         <div>
-          <h2 className="text-xl font-bold text-[#f1f5f9] mb-4">Roster</h2>
+          <h2 className="text-xl font-bold text-[#0f172a] mb-4">Roster</h2>
           <div className="grid grid-cols-2 gap-3 overflow-y-auto h-[380px] pr-1">
             {roster.map((player: { playerId: number; playerName: string; position: string; playerNumber: number }) => (
               <PlayerCard
@@ -177,9 +178,22 @@ export default async function TeamPage({ params }: TeamPageProps) {
           </div>
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="text-xl font-bold text-[#f1f5f9] mb-4">Last Games</h2>
+          <h2 className="text-xl font-bold text-[#0f172a] mb-4">Last Games</h2>
           <GameLog games={games} />
         </div>
+      </div>
+
+      {/* Shot Chart */}
+      <div className="bg-[#1e293b] rounded-md border border-[#334155] p-6">
+        <h2 className="text-xl font-bold text-[#f1f5f9] mb-6">Shot Chart</h2>
+        <ShotsFilter
+          apiUrl={process.env.API_URL!}
+          initialTeamId={teamId}
+          players={roster.map((p: { playerId: number; playerName: string }) => ({
+            id: p.playerId,
+            full_name: p.playerName,
+          }))}
+        />
       </div>
 
     </div>

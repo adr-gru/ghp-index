@@ -3,6 +3,7 @@
 import { useState } from "react";
 import PlayerGameLog from "@/components/PlayerGameLog";
 import NBAPlayerProjection from "@/components/NBAPlayerProjection";
+import ShotsFilter from "@/components/ShotsFilter";
 
 interface PlayerStats {
   playerStatsDate: string;
@@ -47,9 +48,21 @@ export interface ProjectionData {
   games_used: number;
 }
 
-const tabs = ["Last Games", "Projections", "Career"];
+const tabs = ["Last Games", "Projections", "Shots", "Career", "Compare"];
 
-export default function PlayerTabs({ stats, projection }: { stats: PlayerStats[]; projection: ProjectionData }) {
+export default function PlayerTabs({
+  stats,
+  projection,
+  playerId,
+  teamId,
+  apiUrl,
+}: {
+  stats: PlayerStats[];
+  projection: ProjectionData;
+  playerId: number;
+  teamId: number;
+  apiUrl: string;
+}) {
   const [activeTab, setActiveTab] = useState("Last Games");
 
   return (
@@ -63,7 +76,7 @@ export default function PlayerTabs({ stats, projection }: { stats: PlayerStats[]
             className={`px-4 py-2 text-sm font-medium transition-colors
               ${activeTab === tab
                 ? "border-b-2 border-[#38bdf8] text-[#38bdf8]"
-                : "text-[#94a3b8] hover:text-[#f1f5f9]"}`}
+                : "text-[#0f172a] hover:text-[#0f172a]"}`}
           >
             {tab}
           </button>
@@ -73,7 +86,11 @@ export default function PlayerTabs({ stats, projection }: { stats: PlayerStats[]
       {/* Tab Content */}
       {activeTab === "Last Games" && <PlayerGameLog stats={stats} />}
       {activeTab === "Projections" && <NBAPlayerProjection projection={projection} />}
+      {activeTab === "Shots" && (
+        <ShotsFilter apiUrl={apiUrl} initialPlayerId={String(playerId)} initialTeamId={String(teamId)} />
+      )}
       {activeTab === "Career" && <div>Career coming soon</div>}
+      {activeTab === "Compare" && <div>Comparisons coming soon</div>}
     </div>
   );
 }
