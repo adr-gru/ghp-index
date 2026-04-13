@@ -160,7 +160,7 @@ export default function AboutPage() {
           {[1, 2, 3].map((num) => (
             <div
               key={num}
-              className="relative aspect-video bg-base border-2 border-edge rounded-lg overflow-hidden"
+              className="relative aspect-square bg-base border-2 border-edge rounded-lg overflow-hidden"
             >
               <Image
                 src={`/images/about/dev-${num}.jpeg`}
