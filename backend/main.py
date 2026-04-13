@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Query
-from typing import Literal, Dict, Any, Optional, Tuple
+from typing import Literal, Any, Optional
 from fastapi.middleware.cors import CORSMiddleware
 from nba_api.stats.static import teams, players
 from nba_api.stats.endpoints import teaminfocommon, commonteamroster, commonplayerinfo, teamgamelog, playergamelog, shotchartdetail, scoreboardv2, leagueleaders, leaguestandingsv3, leaguegamefinder, playercareerstats
@@ -8,99 +8,133 @@ import numpy as np
 from scipy import stats
 from datetime import datetime, timedelta
 import time
+import os
+import threading
+import diskcache as dc
 
 app = FastAPI()
 
-# Simple in-memory cache with TTL
-class Cache:
-    def __init__(self):
-        self.cache: Dict[str, Tuple[Any, datetime]] = {}
+# ---------------------------------------------------------------------------
+# Persistent disk cache
+# ---------------------------------------------------------------------------
+# Survives process restarts. For full cross-deployment persistence on Railway,
+# mount a volume and set CACHE_DIR=/data/nba_cache in your environment variables.
+CACHE_DIR = os.environ.get("CACHE_DIR", "/tmp/nba_cache")
+_cache = dc.Cache(CACHE_DIR)
 
-    def get(self, key: str, ttl_minutes: int = 30) -> Optional[Any]:
-        if key in self.cache:
-            value, timestamp = self.cache[key]
-            if datetime.now() - timestamp < timedelta(minutes=ttl_minutes):
-                return value
-            else:
-                del self.cache[key]
+STALE_TTL_SECONDS = 7 * 24 * 60 * 60  # keep data on disk for 7 days
+
+
+def cache_get(key: str, ttl_minutes: int) -> Optional[Any]:
+    """Return cached data if fresher than ttl_minutes, else None."""
+    entry = _cache.get(key)
+    if entry is None:
         return None
+    if datetime.now() - datetime.fromisoformat(entry["ts"]) < timedelta(minutes=ttl_minutes):
+        return entry["data"]
+    return None
 
-    def set(self, key: str, value: Any):
-        self.cache[key] = (value, datetime.now())
 
-    def clear_old(self, max_age_minutes: int = 60):
-        """Clear entries older than max_age_minutes"""
-        now = datetime.now()
-        keys_to_delete = [
-            k for k, (_, timestamp) in self.cache.items()
-            if now - timestamp > timedelta(minutes=max_age_minutes)
-        ]
-        for k in keys_to_delete:
-            del self.cache[k]
+def cache_get_stale(key: str) -> Optional[Any]:
+    """Return any cached data regardless of age (stale fallback)."""
+    entry = _cache.get(key)
+    return entry["data"] if entry else None
 
-cache = Cache()
 
-def retry_api_call(func, max_retries: int = 3, initial_delay: float = 1.0):
-    """Retry API calls with exponential backoff"""
+def cache_set(key: str, value: Any) -> None:
+    _cache.set(key, {"data": value, "ts": datetime.now().isoformat()}, expire=STALE_TTL_SECONDS)
+
+
+# ---------------------------------------------------------------------------
+# Retry helper — 2 retries × 9 s timeout = ~19 s worst-case, fits frontend window
+# ---------------------------------------------------------------------------
+def retry_api_call(func, max_retries: int = 2, initial_delay: float = 1.0):
     for attempt in range(max_retries):
         try:
             return func()
         except Exception as e:
             if attempt == max_retries - 1:
                 raise e
-            delay = initial_delay * (2 ** attempt)
-            time.sleep(delay)
- 
+            time.sleep(initial_delay * (2 ** attempt))
+
+
+# ---------------------------------------------------------------------------
+# CORS
+# ---------------------------------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "https://*.vercel.app",  # Allow Vercel preview and production deployments
-        # Add your production domain here when you have it
-        # "https://your-domain.com",
+        "https://*.vercel.app",
     ],
-    allow_origin_regex=r"https://.*\.vercel\.app",  # Vercel deployments
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_methods=["*"],
     allow_headers=["*"],
 )
- 
+
+
+# ---------------------------------------------------------------------------
+# Startup cache warming — pre-populates all 30 teams in the background so a
+# cold restart doesn't leave users hitting a slow nba.com cold.
+# ---------------------------------------------------------------------------
+def _warm_cache():
+    time.sleep(10)  # let the server fully start first
+    nba_teams = teams.get_teams()
+    for team in nba_teams:
+        team_id = team["id"]
+        if cache_get(f"team_{team_id}", ttl_minutes=30) is not None:
+            continue  # already fresh, skip
+        try:
+            get_team(team_id)
+            time.sleep(2)  # stay well within nba.com rate limits
+        except Exception:
+            pass  # warming is best-effort
+
+
+@app.on_event("startup")
+async def startup_event():
+    threading.Thread(target=_warm_cache, daemon=True).start()
+
+
+# ---------------------------------------------------------------------------
+# Static endpoints (no nba.com call needed)
+# ---------------------------------------------------------------------------
 @app.get("/api/teams")
 def get_teams():
-    nba_teams = teams.get_teams()
-    return nba_teams
+    return teams.get_teams()
+
 
 @app.get("/api/players")
 def get_players():
-    nba_players = players.get_players()
-    return nba_players
- 
+    return players.get_players()
+
+
+# ---------------------------------------------------------------------------
+# Team endpoints
+# ---------------------------------------------------------------------------
 @app.get("/api/teams/{team_id}")
 def get_team(team_id: int):
-    # Check cache first (30 minute TTL for team data)
     cache_key = f"team_{team_id}"
-    cached = cache.get(cache_key, ttl_minutes=30)
+    cached = cache_get(cache_key, ttl_minutes=30)
     if cached:
         return cached
 
     try:
-        # Retry logic with increased timeout
         def fetch_team_info():
-            return teaminfocommon.TeamInfoCommon(team_id=team_id, timeout=20)
+            return teaminfocommon.TeamInfoCommon(team_id=team_id, timeout=9)
 
         def fetch_roster():
-            return commonteamroster.CommonTeamRoster(team_id=team_id, timeout=20)
+            return commonteamroster.CommonTeamRoster(team_id=team_id, timeout=9)
 
         team_info = retry_api_call(fetch_team_info)
         roster = retry_api_call(fetch_roster)
-
         info_dict = team_info.get_dict()
 
-        # TeamSeasonRanks (resultSets[1]) goes empty post-season.
-        # Fall back to computing season averages from the game log.
+        # TeamSeasonRanks (resultSets[1]) goes empty post-season — compute from game log.
         computed_stats = None
         if not info_dict["resultSets"][1]["rowSet"]:
             def fetch_game_log():
-                return teamgamelog.TeamGameLog(team_id=team_id, timeout=20)
+                return teamgamelog.TeamGameLog(team_id=team_id, timeout=9)
 
             log = retry_api_call(fetch_game_log)
             log_data = log.get_dict()
@@ -121,88 +155,107 @@ def get_team(team_id: int):
             "roster": roster.get_dict(),
             "computed_stats": computed_stats,
         }
-
-        # Cache the result
-        cache.set(cache_key, result)
+        cache_set(cache_key, result)
         return result
 
     except Exception as e:
-        # If we have stale cached data, return it with a warning
-        stale_cache = cache.get(cache_key, ttl_minutes=1440)  # Check for data up to 24 hours old
-        if stale_cache:
-            return stale_cache
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
         raise HTTPException(status_code=503, detail=f"NBA API timeout or error: {str(e)}")
- 
+
+
+@app.get("/api/{team_id}/teamgamelog/")
+def get_team_logs(team_id: int):
+    cache_key = f"team_gamelog_{team_id}"
+    cached = cache_get(cache_key, ttl_minutes=10)
+    if cached:
+        return cached
+
+    try:
+        def fetch():
+            return teamgamelog.TeamGameLog(team_id=team_id, timeout=9)
+
+        team_log = retry_api_call(fetch)
+        data = team_log.get_dict()
+        result_set = data["resultSets"][0]
+        rows = result_set["rowSet"]
+
+        if not rows:
+            raise HTTPException(status_code=404, detail="No game log found")
+
+        result = {"info": team_log.get_dict()}
+        cache_set(cache_key, result)
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
+        raise HTTPException(status_code=503, detail=f"NBA API timeout or error: {str(e)}")
+
+
+# ---------------------------------------------------------------------------
+# Player endpoints
+# ---------------------------------------------------------------------------
 @app.get("/api/players/{player_id}")
 def get_player(player_id: int):
     cache_key = f"player_{player_id}"
-    cached = cache.get(cache_key, ttl_minutes=30)
+    cached = cache_get(cache_key, ttl_minutes=30)
     if cached:
         return cached
 
     try:
         def fetch_player():
-            return commonplayerinfo.CommonPlayerInfo(player_id=player_id, timeout=20)
+            return commonplayerinfo.CommonPlayerInfo(player_id=player_id, timeout=9)
 
         player_info = retry_api_call(fetch_player)
         result = {"info": player_info.get_dict()}
-        cache.set(cache_key, result)
+        cache_set(cache_key, result)
         return result
+
     except Exception as e:
-        stale_cache = cache.get(cache_key, ttl_minutes=1440)
-        if stale_cache:
-            return stale_cache
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
         raise HTTPException(status_code=503, detail=f"NBA API timeout or error: {str(e)}")
- 
-@app.get("/api/{team_id}/teamgamelog/")
-def get_team_logs(team_id: int):
-      team_info = teamgamelog.TeamGameLog(team_id=team_id) 
-      data = team_info.get_dict()
-      result_set=data["resultSets"][0]
-      rows = result_set["rowSet"]
 
-      if not rows:
-        raise HTTPException(status_code=404, detail="no team found")
-      
-      df = pd.DataFrame(rows, columns=result_set["headers"])
-      window = min(10, len(df))
-      # nba_api returns most recent first; reverse slice to get chronological order
-      recent = df.head(window).iloc[::-1].reset_index(drop=True)
 
-      return {
-        "info": team_info.get_dict()
-    }
 @app.get("/api/players/{player_id}/playergamelog/")
 def get_player_game_logs(player_id: int):
     cache_key = f"player_gamelog_{player_id}"
-    cached = cache.get(cache_key, ttl_minutes=10)  # Game logs change more frequently
+    cached = cache_get(cache_key, ttl_minutes=10)
     if cached:
         return cached
 
     try:
         def fetch_gamelog():
-            return playergamelog.PlayerGameLog(player_id=player_id, timeout=20)
+            return playergamelog.PlayerGameLog(player_id=player_id, timeout=9)
 
         player_stats = retry_api_call(fetch_gamelog)
         result = {"info": player_stats.get_dict()}
-        cache.set(cache_key, result)
+        cache_set(cache_key, result)
         return result
+
     except Exception as e:
-        stale_cache = cache.get(cache_key, ttl_minutes=1440)
-        if stale_cache:
-            return stale_cache
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
         raise HTTPException(status_code=503, detail=f"NBA API timeout or error: {str(e)}")
+
 
 @app.get("/api/players/{player_id}/projection/")
 def get_player_projection(player_id: int):
     cache_key = f"player_projection_{player_id}"
-    cached = cache.get(cache_key, ttl_minutes=10)
+    cached = cache_get(cache_key, ttl_minutes=10)
     if cached:
         return cached
 
     try:
         def fetch_gamelog():
-            return playergamelog.PlayerGameLog(player_id=player_id, timeout=20)
+            return playergamelog.PlayerGameLog(player_id=player_id, timeout=9)
 
         player_stats = retry_api_call(fetch_gamelog)
         data = player_stats.get_dict()
@@ -217,7 +270,6 @@ def get_player_projection(player_id: int):
             df[col] = pd.to_numeric(df[col])
 
         window = min(10, len(df))
-        # nba_api returns most recent first; reverse slice to get chronological order
         recent = df.head(window).iloc[::-1].reset_index(drop=True)
 
         result = {
@@ -228,58 +280,67 @@ def get_player_projection(player_id: int):
             "blk": project_stat("BLK", recent, df),
             "games_used": window,
         }
-
-        cache.set(cache_key, result)
+        cache_set(cache_key, result)
         return result
+
+    except HTTPException:
+        raise
     except Exception as e:
-        stale_cache = cache.get(cache_key, ttl_minutes=1440)
-        if stale_cache:
-            return stale_cache
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
         raise HTTPException(status_code=503, detail=f"NBA API timeout or error: {str(e)}")
 
+
 def project_stat(col: str, recent: pd.DataFrame, df: pd.DataFrame) -> dict:
-        vals = recent[col].values
-        ewma_val = float(pd.Series(vals).ewm(span=5, adjust=False).mean().iloc[-1])
-        std = float(recent[col].std()) if len(vals) > 1 else 0.0
-        season_avg = float(df[col].mean())
+    vals = recent[col].values
+    ewma_val = float(pd.Series(vals).ewm(span=5, adjust=False).mean().iloc[-1])
+    std = float(recent[col].std()) if len(vals) > 1 else 0.0
+    season_avg = float(df[col].mean())
 
-        slope, *_ = stats.linregress(np.arange(len(vals)), vals)
-        if slope > 0.5:
-            trend = "up"
-        elif slope < -0.5:
-            trend = "down"
-        else:
-            trend = "flat"
+    slope, *_ = stats.linregress(np.arange(len(vals)), vals)
+    if slope > 0.5:
+        trend = "up"
+    elif slope < -0.5:
+        trend = "down"
+    else:
+        trend = "flat"
 
-        return {
-            "projection": round(ewma_val, 1),
-            "low": round(max(0.0, ewma_val - std), 1),
-            "high": round(ewma_val + std, 1),
-            "season_avg": round(season_avg, 1),
-            "trend": trend,
-        }
+    return {
+        "projection": round(ewma_val, 1),
+        "low": round(max(0.0, ewma_val - std), 1),
+        "high": round(ewma_val + std, 1),
+        "season_avg": round(season_avg, 1),
+        "trend": trend,
+    }
+
 
 @app.get("/api/players/{player_id}/career/")
 def get_player_career(player_id: int):
     cache_key = f"player_career_{player_id}"
-    cached = cache.get(cache_key, ttl_minutes=60)  # Career stats change less frequently
+    cached = cache_get(cache_key, ttl_minutes=60)
     if cached:
         return cached
 
     try:
         def fetch_career():
-            return playercareerstats.PlayerCareerStats(player_id=player_id, timeout=20)
+            return playercareerstats.PlayerCareerStats(player_id=player_id, timeout=9)
 
         career_stats = retry_api_call(fetch_career)
         result = {"info": career_stats.get_dict()}
-        cache.set(cache_key, result)
+        cache_set(cache_key, result)
         return result
+
     except Exception as e:
-        stale_cache = cache.get(cache_key, ttl_minutes=1440)
-        if stale_cache:
-            return stale_cache
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
         raise HTTPException(status_code=503, detail=f"NBA API timeout or error: {str(e)}")
 
+
+# ---------------------------------------------------------------------------
+# Shots
+# ---------------------------------------------------------------------------
 @app.get("/api/shots")
 def get_shots(
     player_id: int = 0,
@@ -291,231 +352,309 @@ def get_shots(
     if player_id == 0 and team_id == 0:
         raise HTTPException(status_code=400, detail="Provide at least a player_id or team_id")
 
-    shot_data = shotchartdetail.ShotChartDetail(
-        player_id=player_id,
-        team_id=team_id,
-        context_measure_simple=context,
-    )
-    data = shot_data.get_dict()
-    result_set = data["resultSets"][0]
-    rows = result_set["rowSet"]
+    cache_key = f"shots_{player_id}_{team_id}_{context}"
+    cached = cache_get(cache_key, ttl_minutes=60)
+    if cached:
+        return cached
 
-    shots = [
-        {
-            "x": row[17],           # LOC_X
-            "y": row[18],           # LOC_Y
-            "made": row[20] == 1,   # SHOT_MADE_FLAG (int 0/1)
-            "player": row[4],       # PLAYER_NAME
-            "team_name": row[6],    # TEAM_NAME
-            "action_type": row[11], # ACTION_TYPE
-            "shot_type": row[12],   # SHOT_TYPE
-            "zone": row[13],        # SHOT_ZONE_BASIC
-            "distance": row[16],    # SHOT_DISTANCE
+    try:
+        def fetch():
+            return shotchartdetail.ShotChartDetail(
+                player_id=player_id,
+                team_id=team_id,
+                context_measure_simple=context,
+            )
+
+        shot_data = retry_api_call(fetch)
+        data = shot_data.get_dict()
+        result_set = data["resultSets"][0]
+        rows = result_set["rowSet"]
+
+        result = {
+            "shots": [
+                {
+                    "x": row[17],
+                    "y": row[18],
+                    "made": row[20] == 1,
+                    "player": row[4],
+                    "team_name": row[6],
+                    "action_type": row[11],
+                    "shot_type": row[12],
+                    "zone": row[13],
+                    "distance": row[16],
+                }
+                for row in rows
+            ],
+            "count": len(rows),
         }
-        for row in rows
-    ]
+        cache_set(cache_key, result)
+        return result
 
-    return {"shots": shots, "count": len(shots)}
+    except Exception as e:
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
+        raise HTTPException(status_code=503, detail=f"NBA API timeout or error: {str(e)}")
 
 
+# ---------------------------------------------------------------------------
+# Games / scores
+# ---------------------------------------------------------------------------
 @app.get("/api/games/today")
 def get_games_today():
-    board = scoreboardv2.ScoreboardV2()
-    data = board.get_dict()
+    cache_key = "games_today"
+    cached = cache_get(cache_key, ttl_minutes=5)
+    if cached:
+        return cached
 
-    g_rs = data["resultSets"][0]   # GameHeader
-    l_rs = data["resultSets"][1]   # LineScore
+    try:
+        def fetch():
+            return scoreboardv2.ScoreboardV2()
 
-    g_headers = g_rs["headers"]
-    l_headers = l_rs["headers"]
+        board = retry_api_call(fetch)
+        data = board.get_dict()
 
-    def g_idx(name): return g_headers.index(name)
-    def l_idx(name): return l_headers.index(name)
+        g_rs = data["resultSets"][0]
+        l_rs = data["resultSets"][1]
+        g_headers = g_rs["headers"]
+        l_headers = l_rs["headers"]
 
-    games = {}
-    for row in g_rs["rowSet"]:
-        game_id = row[g_idx("GAME_ID")]
-        games[game_id] = {
-            "game_id": game_id,
-            "status": row[g_idx("GAME_STATUS_TEXT")],
-            "home_team_id": row[g_idx("HOME_TEAM_ID")],
-            "away_team_id": row[g_idx("VISITOR_TEAM_ID")],
-            "home_abbr": None,
-            "away_abbr": None,
-            "home_city": None,
-            "away_city": None,
-            "home_pts": None,
-            "away_pts": None,
-            "home_record": None,
-            "away_record": None,
-        }
+        def g_idx(name): return g_headers.index(name)
+        def l_idx(name): return l_headers.index(name)
 
-    for row in l_rs["rowSet"]:
-        game_id = row[l_idx("GAME_ID")]
-        team_id = row[l_idx("TEAM_ID")]
-        if game_id not in games:
-            continue
-        g = games[game_id]
-        entry = {
-            "abbr": row[l_idx("TEAM_ABBREVIATION")],
-            "city": row[l_idx("TEAM_CITY_NAME")],
-            "pts": row[l_idx("PTS")],
-            "record": row[l_idx("TEAM_WINS_LOSSES")],
-        }
-        if team_id == g["home_team_id"]:
-            g["home_abbr"] = entry["abbr"]
-            g["home_city"] = entry["city"]
-            g["home_pts"] = entry["pts"]
-            g["home_record"] = entry["record"]
-        else:
-            g["away_abbr"] = entry["abbr"]
-            g["away_city"] = entry["city"]
-            g["away_pts"] = entry["pts"]
-            g["away_record"] = entry["record"]
+        games = {}
+        for row in g_rs["rowSet"]:
+            game_id = row[g_idx("GAME_ID")]
+            games[game_id] = {
+                "game_id": game_id,
+                "status": row[g_idx("GAME_STATUS_TEXT")],
+                "home_team_id": row[g_idx("HOME_TEAM_ID")],
+                "away_team_id": row[g_idx("VISITOR_TEAM_ID")],
+                "home_abbr": None, "away_abbr": None,
+                "home_city": None, "away_city": None,
+                "home_pts": None, "away_pts": None,
+                "home_record": None, "away_record": None,
+            }
 
-    return {"games": list(games.values())}
+        for row in l_rs["rowSet"]:
+            game_id = row[l_idx("GAME_ID")]
+            team_id = row[l_idx("TEAM_ID")]
+            if game_id not in games:
+                continue
+            g = games[game_id]
+            entry = {
+                "abbr": row[l_idx("TEAM_ABBREVIATION")],
+                "city": row[l_idx("TEAM_CITY_NAME")],
+                "pts": row[l_idx("PTS")],
+                "record": row[l_idx("TEAM_WINS_LOSSES")],
+            }
+            if team_id == g["home_team_id"]:
+                g["home_abbr"] = entry["abbr"]
+                g["home_city"] = entry["city"]
+                g["home_pts"] = entry["pts"]
+                g["home_record"] = entry["record"]
+            else:
+                g["away_abbr"] = entry["abbr"]
+                g["away_city"] = entry["city"]
+                g["away_pts"] = entry["pts"]
+                g["away_record"] = entry["record"]
+
+        result = {"games": list(games.values())}
+        cache_set(cache_key, result)
+        return result
+
+    except Exception as e:
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
+        raise HTTPException(status_code=503, detail=f"NBA API timeout or error: {str(e)}")
 
 
 @app.get("/api/games/recent")
 def get_recent_games(limit: int = 15):
-    finder = leaguegamefinder.LeagueGameFinder(
-        league_id_nullable="00",
-        season_type_nullable="Regular Season",
-    )
-    data = finder.get_dict()
-    rs = data["resultSets"][0]
-    headers = rs["headers"]
-    rows = rs["rowSet"]
+    cache_key = f"games_recent_{limit}"
+    cached = cache_get(cache_key, ttl_minutes=30)
+    if cached:
+        return cached
 
-    def idx(name): return headers.index(name)
+    try:
+        def fetch():
+            return leaguegamefinder.LeagueGameFinder(
+                league_id_nullable="00",
+                season_type_nullable="Regular Season",
+            )
 
-    # Group rows by game_id (each game has two rows: home + away)
-    games: dict = {}
-    for row in rows:
-        game_id = row[idx("GAME_ID")]
-        if game_id not in games:
-            if len(games) >= limit * 2:
+        finder = retry_api_call(fetch)
+        data = finder.get_dict()
+        rs = data["resultSets"][0]
+        headers = rs["headers"]
+        rows = rs["rowSet"]
+
+        def idx(name): return headers.index(name)
+
+        games: dict = {}
+        for row in rows:
+            game_id = row[idx("GAME_ID")]
+            if game_id not in games:
+                if len(games) >= limit * 2:
+                    break
+                games[game_id] = {"game_id": game_id, "game_date": row[idx("GAME_DATE")], "teams": []}
+            games[game_id]["teams"].append({
+                "team_id": row[idx("TEAM_ID")],
+                "team_abbr": row[idx("TEAM_ABBREVIATION")],
+                "pts": row[idx("PTS")],
+                "wl": row[idx("WL")],
+                "matchup": row[idx("MATCHUP")],
+            })
+
+        output = []
+        for g in games.values():
+            if len(g["teams"]) != 2:
+                continue
+            t1, t2 = g["teams"]
+            if "@" not in t1["matchup"]:
+                home, away = t1, t2
+            else:
+                home, away = t2, t1
+            output.append({
+                "game_id": g["game_id"],
+                "game_date": g["game_date"],
+                "home_team_id": home["team_id"],
+                "home_abbr": home["team_abbr"],
+                "home_pts": home["pts"],
+                "away_team_id": away["team_id"],
+                "away_abbr": away["team_abbr"],
+                "away_pts": away["pts"],
+            })
+            if len(output) >= limit:
                 break
-            games[game_id] = {"game_id": game_id, "game_date": row[idx("GAME_DATE")], "teams": []}
-        games[game_id]["teams"].append({
-            "team_id": row[idx("TEAM_ID")],
-            "team_abbr": row[idx("TEAM_ABBREVIATION")],
-            "pts": row[idx("PTS")],
-            "wl": row[idx("WL")],
-            "matchup": row[idx("MATCHUP")],
-        })
 
-    result = []
-    for g in games.values():
-        if len(g["teams"]) != 2:
-            continue
-        t1, t2 = g["teams"]
-        # Home team matchup has "vs." not "@"
-        if "@" not in t1["matchup"]:
-            home, away = t1, t2
-        else:
-            home, away = t2, t1
-        result.append({
-            "game_id": g["game_id"],
-            "game_date": g["game_date"],
-            "home_team_id": home["team_id"],
-            "home_abbr": home["team_abbr"],
-            "home_pts": home["pts"],
-            "away_team_id": away["team_id"],
-            "away_abbr": away["team_abbr"],
-            "away_pts": away["pts"],
-        })
-        if len(result) >= limit:
-            break
+        result = {"games": output}
+        cache_set(cache_key, result)
+        return result
 
-    return {"games": result}
+    except Exception as e:
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
+        raise HTTPException(status_code=503, detail=f"NBA API timeout or error: {str(e)}")
 
 
+# ---------------------------------------------------------------------------
+# League data
+# ---------------------------------------------------------------------------
 @app.get("/api/leaders")
 def get_league_leaders(stat: str = "PTS"):
-    data = leagueleaders.LeagueLeaders(
-        stat_category_abbreviation=stat,
-        per_mode48="PerGame",
-        season_type_all_star="Regular Season",
-        season="2024-25",
-    ).get_dict()
-    rs = data["resultSet"]
-    headers = rs["headers"]
+    cache_key = f"leaders_{stat}"
+    cached = cache_get(cache_key, ttl_minutes=60)
+    if cached:
+        return cached
 
-    def idx(name): return headers.index(name)
+    try:
+        def fetch():
+            return leagueleaders.LeagueLeaders(
+                stat_category_abbreviation=stat,
+                per_mode48="PerGame",
+                season_type_all_star="Regular Season",
+                season="2024-25",
+            )
 
-    result = []
-    for row in rs["rowSet"][:10]:
-        result.append({
-            "rank": row[idx("RANK")],
-            "player_id": row[idx("PLAYER_ID")],
-            "player": row[idx("PLAYER")],
-            "team": row[idx("TEAM")],
-            "gp": row[idx("GP")],
-            "value": row[idx(stat)],
-        })
-    return {"leaders": result, "stat": stat}
+        leaders = retry_api_call(fetch)
+        data = leaders.get_dict()
+        rs = data["resultSet"]
+        headers = rs["headers"]
+
+        def idx(name): return headers.index(name)
+
+        result = {
+            "leaders": [
+                {
+                    "rank": row[idx("RANK")],
+                    "player_id": row[idx("PLAYER_ID")],
+                    "player": row[idx("PLAYER")],
+                    "team": row[idx("TEAM")],
+                    "gp": row[idx("GP")],
+                    "value": row[idx(stat)],
+                }
+                for row in rs["rowSet"][:10]
+            ],
+            "stat": stat,
+        }
+        cache_set(cache_key, result)
+        return result
+
+    except Exception as e:
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
+        raise HTTPException(status_code=503, detail=f"NBA API timeout or error: {str(e)}")
 
 
 @app.get("/api/standings")
 def get_standings():
-    data = leaguestandingsv3.LeagueStandingsV3().get_dict()
-    rs = data["resultSets"][0]
-    headers = rs["headers"]
+    cache_key = "standings"
+    cached = cache_get(cache_key, ttl_minutes=60)
+    if cached:
+        return cached
 
-    def idx(name): return headers.index(name) if name in headers else -1
+    try:
+        def fetch():
+            return leaguestandingsv3.LeagueStandingsV3()
 
-    east, west = [], []
-    for row in rs["rowSet"]:
-        conference = row[idx("Conference")]
-        clinch_i = idx("ClinchIndicator")
-        home_i = idx("HOME")
-        road_i = idx("ROAD")
-        l10_i = idx("L10")
-        streak_i = idx("strCurrentStreak")
+        standings = retry_api_call(fetch)
+        data = standings.get_dict()
+        rs = data["resultSets"][0]
+        headers = rs["headers"]
 
-        team_data = {
-            "team_id": row[idx("TeamID")],
-            "city": row[idx("TeamCity")],
-            "name": row[idx("TeamName")],
-            "wins": row[idx("WINS")],
-            "losses": row[idx("LOSSES")],
-            "pct": row[idx("WinPCT")],
-            "rank": row[idx("PlayoffRank")],
-            "clinch": row[clinch_i] if clinch_i >= 0 else "",
-            "home": row[home_i] if home_i >= 0 else "",
-            "road": row[road_i] if road_i >= 0 else "",
-            "l10": row[l10_i] if l10_i >= 0 else "",
-            "streak": row[streak_i] if streak_i >= 0 else "",
-        }
-        if conference == "East":
-            east.append(team_data)
-        else:
-            west.append(team_data)
+        def idx(name): return headers.index(name) if name in headers else -1
 
-    east.sort(key=lambda x: x["rank"])
-    west.sort(key=lambda x: x["rank"])
-    return {"east": east, "west": west}
+        east, west = [], []
+        for row in rs["rowSet"]:
+            conference = row[idx("Conference")]
+            team_data = {
+                "team_id": row[idx("TeamID")],
+                "city": row[idx("TeamCity")],
+                "name": row[idx("TeamName")],
+                "wins": row[idx("WINS")],
+                "losses": row[idx("LOSSES")],
+                "pct": row[idx("WinPCT")],
+                "rank": row[idx("PlayoffRank")],
+                "clinch": row[idx("ClinchIndicator")] if idx("ClinchIndicator") >= 0 else "",
+                "home": row[idx("HOME")] if idx("HOME") >= 0 else "",
+                "road": row[idx("ROAD")] if idx("ROAD") >= 0 else "",
+                "l10": row[idx("L10")] if idx("L10") >= 0 else "",
+                "streak": row[idx("strCurrentStreak")] if idx("strCurrentStreak") >= 0 else "",
+            }
+            if conference == "East":
+                east.append(team_data)
+            else:
+                west.append(team_data)
+
+        east.sort(key=lambda x: x["rank"])
+        west.sort(key=lambda x: x["rank"])
+        result = {"east": east, "west": west}
+        cache_set(cache_key, result)
+        return result
+
+    except Exception as e:
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
+        raise HTTPException(status_code=503, detail=f"NBA API timeout or error: {str(e)}")
 
 
+# ---------------------------------------------------------------------------
+# Cache management
+# ---------------------------------------------------------------------------
 @app.get("/api/cache/stats")
 def get_cache_stats():
-    """Get cache statistics"""
     return {
-        "entries": len(cache.cache),
-        "keys": list(cache.cache.keys())
+        "entries": len(_cache),
+        "keys": list(_cache.iterkeys()),
     }
 
 
 @app.post("/api/cache/clear")
 def clear_cache():
-    """Clear the entire cache"""
-    cache.cache.clear()
+    _cache.clear()
     return {"message": "Cache cleared successfully"}
-
-
-@app.delete("/api/cache/clear-old")
-def clear_old_cache():
-    """Clear cache entries older than 60 minutes"""
-    cache.clear_old(max_age_minutes=60)
-    return {"message": "Old cache entries cleared", "remaining": len(cache.cache)}
