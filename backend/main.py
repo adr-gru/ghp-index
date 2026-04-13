@@ -6,8 +6,51 @@ from nba_api.stats.endpoints import teaminfocommon, commonteamroster, commonplay
 import pandas as pd
 import numpy as np
 from scipy import stats
- 
+from datetime import datetime, timedelta
+from typing import Dict, Any, Optional
+import time
+
 app = FastAPI()
+
+# Simple in-memory cache with TTL
+class Cache:
+    def __init__(self):
+        self.cache: Dict[str, tuple[Any, datetime]] = {}
+
+    def get(self, key: str, ttl_minutes: int = 30) -> Optional[Any]:
+        if key in self.cache:
+            value, timestamp = self.cache[key]
+            if datetime.now() - timestamp < timedelta(minutes=ttl_minutes):
+                return value
+            else:
+                del self.cache[key]
+        return None
+
+    def set(self, key: str, value: Any):
+        self.cache[key] = (value, datetime.now())
+
+    def clear_old(self, max_age_minutes: int = 60):
+        """Clear entries older than max_age_minutes"""
+        now = datetime.now()
+        keys_to_delete = [
+            k for k, (_, timestamp) in self.cache.items()
+            if now - timestamp > timedelta(minutes=max_age_minutes)
+        ]
+        for k in keys_to_delete:
+            del self.cache[k]
+
+cache = Cache()
+
+def retry_api_call(func, max_retries: int = 3, initial_delay: float = 1.0):
+    """Retry API calls with exponential backoff"""
+    for attempt in range(max_retries):
+        try:
+            return func()
+        except Exception as e:
+            if attempt == max_retries - 1:
+                raise e
+            delay = initial_delay * (2 ** attempt)
+            time.sleep(delay)
  
 app.add_middleware(
     CORSMiddleware,
@@ -34,9 +77,22 @@ def get_players():
  
 @app.get("/api/teams/{team_id}")
 def get_team(team_id: int):
+    # Check cache first (30 minute TTL for team data)
+    cache_key = f"team_{team_id}"
+    cached = cache.get(cache_key, ttl_minutes=30)
+    if cached:
+        return cached
+
     try:
-        team_info = teaminfocommon.TeamInfoCommon(team_id=team_id, timeout=10)
-        roster = commonteamroster.CommonTeamRoster(team_id=team_id, timeout=10)
+        # Retry logic with increased timeout
+        def fetch_team_info():
+            return teaminfocommon.TeamInfoCommon(team_id=team_id, timeout=20)
+
+        def fetch_roster():
+            return commonteamroster.CommonTeamRoster(team_id=team_id, timeout=20)
+
+        team_info = retry_api_call(fetch_team_info)
+        roster = retry_api_call(fetch_roster)
 
         info_dict = team_info.get_dict()
 
@@ -44,7 +100,10 @@ def get_team(team_id: int):
         # Fall back to computing season averages from the game log.
         computed_stats = None
         if not info_dict["resultSets"][1]["rowSet"]:
-            log = teamgamelog.TeamGameLog(team_id=team_id, timeout=10)
+            def fetch_game_log():
+                return teamgamelog.TeamGameLog(team_id=team_id, timeout=20)
+
+            log = retry_api_call(fetch_game_log)
             log_data = log.get_dict()
             log_rs = log_data["resultSets"][0]
             rows = log_rs["rowSet"]
@@ -58,22 +117,42 @@ def get_team(team_id: int):
                     "apg": round(float(df["AST"].mean()), 1),
                 }
 
-        return {
+        result = {
             "info": info_dict,
             "roster": roster.get_dict(),
             "computed_stats": computed_stats,
         }
+
+        # Cache the result
+        cache.set(cache_key, result)
+        return result
+
     except Exception as e:
+        # If we have stale cached data, return it with a warning
+        stale_cache = cache.get(cache_key, ttl_minutes=1440)  # Check for data up to 24 hours old
+        if stale_cache:
+            return stale_cache
         raise HTTPException(status_code=503, detail=f"NBA API timeout or error: {str(e)}")
  
 @app.get("/api/players/{player_id}")
 def get_player(player_id: int):
+    cache_key = f"player_{player_id}"
+    cached = cache.get(cache_key, ttl_minutes=30)
+    if cached:
+        return cached
+
     try:
-        player_info = commonplayerinfo.CommonPlayerInfo(player_id=player_id, timeout=10)
-        return {
-            "info": player_info.get_dict()
-        }
+        def fetch_player():
+            return commonplayerinfo.CommonPlayerInfo(player_id=player_id, timeout=20)
+
+        player_info = retry_api_call(fetch_player)
+        result = {"info": player_info.get_dict()}
+        cache.set(cache_key, result)
+        return result
     except Exception as e:
+        stale_cache = cache.get(cache_key, ttl_minutes=1440)
+        if stale_cache:
+            return stale_cache
         raise HTTPException(status_code=503, detail=f"NBA API timeout or error: {str(e)}")
  
 @app.get("/api/{team_id}/teamgamelog/")
@@ -96,40 +175,68 @@ def get_team_logs(team_id: int):
     }
 @app.get("/api/players/{player_id}/playergamelog/")
 def get_player_game_logs(player_id: int):
+    cache_key = f"player_gamelog_{player_id}"
+    cached = cache.get(cache_key, ttl_minutes=10)  # Game logs change more frequently
+    if cached:
+        return cached
+
     try:
-        player_stats = playergamelog.PlayerGameLog(player_id=player_id, timeout=10)
-        return {
-            "info": player_stats.get_dict()
-        }
+        def fetch_gamelog():
+            return playergamelog.PlayerGameLog(player_id=player_id, timeout=20)
+
+        player_stats = retry_api_call(fetch_gamelog)
+        result = {"info": player_stats.get_dict()}
+        cache.set(cache_key, result)
+        return result
     except Exception as e:
+        stale_cache = cache.get(cache_key, ttl_minutes=1440)
+        if stale_cache:
+            return stale_cache
         raise HTTPException(status_code=503, detail=f"NBA API timeout or error: {str(e)}")
 
 @app.get("/api/players/{player_id}/projection/")
 def get_player_projection(player_id: int):
-    player_stats = playergamelog.PlayerGameLog(player_id=player_id)
-    data = player_stats.get_dict()
-    result_set = data["resultSets"][0]
-    rows = result_set["rowSet"]
+    cache_key = f"player_projection_{player_id}"
+    cached = cache.get(cache_key, ttl_minutes=10)
+    if cached:
+        return cached
 
-    if not rows:
-        raise HTTPException(status_code=404, detail="No game log found")
+    try:
+        def fetch_gamelog():
+            return playergamelog.PlayerGameLog(player_id=player_id, timeout=20)
 
-    df = pd.DataFrame(rows, columns=result_set["headers"])
-    for col in ["PTS", "REB", "AST", "STL", "BLK", "TOV"]:
-        df[col] = pd.to_numeric(df[col])
+        player_stats = retry_api_call(fetch_gamelog)
+        data = player_stats.get_dict()
+        result_set = data["resultSets"][0]
+        rows = result_set["rowSet"]
 
-    window = min(10, len(df))
-    # nba_api returns most recent first; reverse slice to get chronological order
-    recent = df.head(window).iloc[::-1].reset_index(drop=True)
+        if not rows:
+            raise HTTPException(status_code=404, detail="No game log found")
 
-    return {
-        "pts": project_stat("PTS", recent, df),
-        "reb": project_stat("REB", recent, df),
-        "ast": project_stat("AST", recent, df),
-        "stl": project_stat("STL", recent, df),
-        "blk": project_stat("BLK", recent, df),
-        "games_used": window,
-    }
+        df = pd.DataFrame(rows, columns=result_set["headers"])
+        for col in ["PTS", "REB", "AST", "STL", "BLK", "TOV"]:
+            df[col] = pd.to_numeric(df[col])
+
+        window = min(10, len(df))
+        # nba_api returns most recent first; reverse slice to get chronological order
+        recent = df.head(window).iloc[::-1].reset_index(drop=True)
+
+        result = {
+            "pts": project_stat("PTS", recent, df),
+            "reb": project_stat("REB", recent, df),
+            "ast": project_stat("AST", recent, df),
+            "stl": project_stat("STL", recent, df),
+            "blk": project_stat("BLK", recent, df),
+            "games_used": window,
+        }
+
+        cache.set(cache_key, result)
+        return result
+    except Exception as e:
+        stale_cache = cache.get(cache_key, ttl_minutes=1440)
+        if stale_cache:
+            return stale_cache
+        raise HTTPException(status_code=503, detail=f"NBA API timeout or error: {str(e)}")
 
 def project_stat(col: str, recent: pd.DataFrame, df: pd.DataFrame) -> dict:
         vals = recent[col].values
@@ -155,13 +262,23 @@ def project_stat(col: str, recent: pd.DataFrame, df: pd.DataFrame) -> dict:
 
 @app.get("/api/players/{player_id}/career/")
 def get_player_career(player_id: int):
+    cache_key = f"player_career_{player_id}"
+    cached = cache.get(cache_key, ttl_minutes=60)  # Career stats change less frequently
+    if cached:
+        return cached
+
     try:
-        career_stats = playercareerstats.PlayerCareerStats(player_id=player_id, timeout=10)
-        data = career_stats.get_dict()
-        return {
-            "info": data
-        }
+        def fetch_career():
+            return playercareerstats.PlayerCareerStats(player_id=player_id, timeout=20)
+
+        career_stats = retry_api_call(fetch_career)
+        result = {"info": career_stats.get_dict()}
+        cache.set(cache_key, result)
+        return result
     except Exception as e:
+        stale_cache = cache.get(cache_key, ttl_minutes=1440)
+        if stale_cache:
+            return stale_cache
         raise HTTPException(status_code=503, detail=f"NBA API timeout or error: {str(e)}")
 
 @app.get("/api/shots")
@@ -380,3 +497,26 @@ def get_standings():
     east.sort(key=lambda x: x["rank"])
     west.sort(key=lambda x: x["rank"])
     return {"east": east, "west": west}
+
+
+@app.get("/api/cache/stats")
+def get_cache_stats():
+    """Get cache statistics"""
+    return {
+        "entries": len(cache.cache),
+        "keys": list(cache.cache.keys())
+    }
+
+
+@app.post("/api/cache/clear")
+def clear_cache():
+    """Clear the entire cache"""
+    cache.cache.clear()
+    return {"message": "Cache cleared successfully"}
+
+
+@app.delete("/api/cache/clear-old")
+def clear_old_cache():
+    """Clear cache entries older than 60 minutes"""
+    cache.clear_old(max_age_minutes=60)
+    return {"message": "Old cache entries cleared", "remaining": len(cache.cache)}
