@@ -22,27 +22,33 @@ GHP-Index is a web application that aggregates and displays statistics from the 
 - [x] NBA team listing page — fetches all teams, displays as logo cards
 - [x] NBA team detail page — team info, record, conference, division, rankings, PPG/RPG/APG, roster grid, game log
 - [x] NBA player detail page — headshot, bio, season averages, game log via `PlayerTabs`
-- [x] Reusable components: `Header`, `NavBar`, `TeamCard`, `PlayerCard`, `GameLog`, `PlayerGameLog`, `PlayerTabs`, `TeamInfoNote`
+- [x] Reusable components: `Header`, `NavBar`, `TeamCard`, `PlayerCard`, `GameLog`, `PlayerGameLog`, `PlayerTabs`, `TeamInfoNote`, `PlayerCareer`, `NBAPlayerComparison`
 - [x] Dynamic routing: `/nba/teams/[teamId]` and `/nba/players/[playerId]`
 - [x] League pages scaffolded: NBA, NFL, MLB, NHL (placeholders)
-- [x] Backend endpoints: `/api/teams`, `/api/teams/{id}`, `/api/players/{id}`, `/api/{team_id}/teamgamelog/`, `/api/players/{id}/playergamelog/`
+- [x] Backend endpoints: `/api/teams`, `/api/teams/{id}`, `/api/players/{id}`, `/api/{team_id}/teamgamelog/`, `/api/players/{id}/playergamelog/`, `/api/players/{id}/career/`
 - [x] NBA CDN images working (team logos + player headshots)
 - [x] `Header` + `NavBar` moved into `layout.tsx` — no longer duplicated per page
 - [x] Complete visual refactor — cohesive dark theme with custom color palette (Slate Noir)
 - [x] All hardcoded `localhost:8000` URLs replaced with `process.env.API_URL` via `.env.local`
 - [x] nba_api array indices replaced with named mappings throughout team + player pages
-- [x] `PlayerTabs` component with Last Games, Projections (stub), Career (stub) tabs
+- [x] `PlayerTabs` component with Last Games, Projections, Shots, Career, and Compare tabs
 - [x] `/api/players/{id}/projection` endpoint — EWMA + linregress trend for PTS/REB/AST and extended stats
 - [x] `NBAPlayerProjection.tsx` — built out with StatCard, trend indicators, projection range
+- [x] `PlayerCareer.tsx` — comprehensive career stats with season-by-season table, career totals/averages, career highs, playoff toggle
+- [x] `NBAPlayerComparison.tsx` — side-by-side player comparison with search functionality and color-coded stat differentials
 - [x] Roster panel on team page — 2-column scrollable grid sized to match GameLog height
 - [x] Dashboard page — league hub cards, scoreboard, league leaders (PPG/RPG/APG tabs), standings (East/West tabs), NBA teams grid
 - [x] Backend endpoints: `/api/games/today` (`ScoreboardV2`), `/api/leaders?stat=` (`LeagueLeaders`), `/api/standings` (`LeagueStandingsV3`)
 - [x] `DashboardLeaders.tsx` + `DashboardStandings.tsx` — client components with tabbed UI
 - [x] Dashboard fetches all data with `Promise.allSettled` — graceful fallback if any endpoint fails
 - [x] Team page `teamRanks[0]` null guard — post-season `TeamInfoCommon` returns empty rankings
+- [x] Shot chart with filters — `ShotsFilter.tsx` component with player/team/context measure controls
+- [x] Percentage formatting — all FG%, 3P%, FT% properly displayed as percentages (45.6%) instead of decimals (0.456)
+- [x] Accessibility improvements — improved text contrast across all components for better readability
+- [x] Deployment preparation — CORS configuration, environment variable templates, .gitignore files, deployment documentation
 
 ### In Progress
-- [ ] Shot chart heatmap — `ShotChartDetail` endpoint integration (endpoint done, frontend tab in progress)
+- [ ] Deployment to production (Vercel + Render)
 
 ### Known Issues (Fix Before Moving Forward)
 - [x] ~~Hardcoded backend URL~~ — replaced with `process.env.API_URL` via `.env.local`
@@ -223,10 +229,10 @@ Key columns returned: `LOC_X`, `LOC_Y`, `SHOT_MADE_FLAG`, `SHOT_ZONE_BASIC`, `SH
 **Remaining:**
 6. Search across players and teams
 
-### Phase 5: NBA Enhanced Features
-1. Player comparison tool (side-by-side stats)
-2. Team standings page
-3. Season stat leaders
+### Phase 5: NBA Enhanced Features ✅ (Completed)
+1. ~~Player comparison tool (side-by-side stats)~~ ✅
+2. Team standings page (available on Dashboard)
+3. Season stat leaders (available on Dashboard)
 
 ### Phase 6: AI Features (Next Up)
 **Player Projections:**
@@ -281,6 +287,7 @@ Key columns returned: `LOC_X`, `LOC_Y`, `SHOT_MADE_FLAG`, `SHOT_ZONE_BASIC`, `SH
 | Apr 6, 2026 | 8 | Total visual redesign (Uncodixfy): Slate Noir dark palette (`#0f172a`/`#1e293b`/`#38bdf8`); removed all white cards, oversized border radii, eyebrow labels, zebra stripes, shadow effects; NavBar active route highlighting; `<dl>/<dt>/<dd>` for hero info lists; `NBAPlayerProjection` styled to match; all 14 files updated |
 | Apr 8, 2026 | 9 | Projection endpoint built (`/api/players/{id}/projection`) with EWMA + linregress trend; `NBAPlayerProjection.tsx` completed with StatCard components; extended numeric columns added (FG%, 3P%, FT%, OREB/DREB, STL, BLK, TOV); team page roster panel refactored to 2-col scrollable grid alongside GameLog; identified `get_team_logs` bug; added Shot Chart heatmap sprint to PROJECT_BRIEF.md |
 | Apr 13, 2026 | 10 | Dashboard page built (Phase 4): league hub cards, scoreboard, league leaders (PPG/RPG/APG tabs), standings (East/West tabs), NBA teams grid; 3 new backend endpoints (`/api/games/today`, `/api/leaders`, `/api/standings`); `DashboardLeaders.tsx` + `DashboardStandings.tsx` client components; `Promise.allSettled` for graceful per-section error handling; fixed team page crash when `teamRanks[0]` is undefined post-season |
+| Apr 13, 2026 | 11 | **Player page completion:** Career tab implemented with season-by-season stats table, career totals/averages widgets, career highs section, playoff toggle; Player comparison tab with search functionality and color-coded stat differentials; `/api/players/{id}/career/` endpoint added; percentage formatting fixed across all components (FG%, 3P%, FT%); accessibility improvements with better text contrast for light/dark backgrounds; deployment preparation: CORS config for production, .gitignore files, environment variable templates, deployment documentation (DEPLOYMENT.md), Render/Vercel config files |
 
 ---
 
