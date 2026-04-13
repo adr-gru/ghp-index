@@ -1,6 +1,10 @@
 # Personal notes (not for public repo)
 LEARNING_NOTES.md
 PROJECTIONS_GUIDE.md
+DEPLOYMENT.md
+PROJECT_GUIDE.md
+*deployment*.md
+*guide*.md
 .DS_Store
 venv/
 

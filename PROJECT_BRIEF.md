@@ -31,15 +31,11 @@ GHP-Index is a web application that aggregates and displays statistics from the 
 
 ## Deployment
 
-**Production URLs:**
-- Frontend: `https://ghp-index.vercel.app`
-- Backend: `https://ghp-index-production.up.railway.app`
+**Platform:** Vercel (Frontend) + Railway (Backend)
 
-**Environment Variables (Vercel):**
-```env
-API_URL=https://ghp-index-production.up.railway.app
-NEXT_PUBLIC_API_URL=https://ghp-index-production.up.railway.app
-```
+**Environment Variables:**
+- `API_URL` - Backend API URL
+- `NEXT_PUBLIC_API_URL` - Backend API URL (client-side accessible)
 
 **Deployment Process:**
 1. Push to `main` branch on GitHub
@@ -84,11 +80,6 @@ NEXT_PUBLIC_API_URL=https://ghp-index-production.up.railway.app
 - Responsive design with mobile support
 - Proper contrast for accessibility
 
-**Data Quality Fixes:**
-- Career highs now show per-game averages (not season totals)
-- Career stats use complete data from NBA API
-- Percentage formatting (45.6% not 0.456)
-- Player comparison contrast improvements
 
 ### 🔧 Known Issues
 
@@ -253,25 +244,25 @@ ghp-index/
 
 **Local Development:**
 ```bash
-# Frontend
-cd frontend
-npm install
-echo "NEXT_PUBLIC_API_URL=https://ghp-index-production.up.railway.app" > .env.local
-npm run dev
-# → http://localhost:3000
-
-# Backend
+# Backend (start first)
 cd backend
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn main:app --reload
 # → http://localhost:8000
+
+# Frontend (in new terminal)
+cd frontend
+npm install
+echo "NEXT_PUBLIC_API_URL=http://localhost:8000" > .env.local
+npm run dev
+# → http://localhost:3000
 ```
 
-**Testing Production:**
-- Frontend: https://ghp-index.vercel.app
-- Backend API: https://ghp-index-production.up.railway.app/api/teams
+**Production:**
+- Configured via Vercel environment variables
+- Auto-deploys from `main` branch
 
 ---
 
