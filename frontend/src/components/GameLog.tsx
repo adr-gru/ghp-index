@@ -58,13 +58,13 @@ export default function GameLog({ games }: { games: Game[] }) {
                 <td className="px-4 py-2.5 text-secondary">{game.tov}</td>
                 <td className="px-4 py-2.5 text-secondary">{game.fgm}</td>
                 <td className="px-4 py-2.5 text-secondary">{game.fga}</td>
-                <td className="px-4 py-2.5 text-secondary">{game.fgPct}</td>
+                <td className="px-4 py-2.5 text-secondary">{game.fgPct ? (parseFloat(game.fgPct) * 100).toFixed(1) + '%' : '—'}</td>
                 <td className="px-4 py-2.5 text-secondary">{game.fg3m}</td>
                 <td className="px-4 py-2.5 text-secondary">{game.fg3a}</td>
-                <td className="px-4 py-2.5 text-secondary">{game.fg3Pct}</td>
+                <td className="px-4 py-2.5 text-secondary">{game.fg3Pct ? (parseFloat(game.fg3Pct) * 100).toFixed(1) + '%' : '—'}</td>
                 <td className="px-4 py-2.5 text-secondary">{game.ftm}</td>
                 <td className="px-4 py-2.5 text-secondary">{game.fta}</td>
-                <td className="px-4 py-2.5 text-secondary">{game.ftPct}</td>
+                <td className="px-4 py-2.5 text-secondary">{game.ftPct ? (parseFloat(game.ftPct) * 100).toFixed(1) + '%' : '—'}</td>
                 <td className="px-4 py-2.5 text-secondary">{game.oreb}</td>
                 <td className="px-4 py-2.5 text-secondary">{game.dreb}</td>
                 <td className="px-4 py-2.5 text-secondary">{game.pf}</td>

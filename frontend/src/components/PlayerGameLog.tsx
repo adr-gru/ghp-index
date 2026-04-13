@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import TeamInfoNote from "@/components/TeamInfoNote";
 
 interface PlayerStats {
   playerStatsDate: string;
@@ -28,7 +29,7 @@ interface PlayerStats {
   defensiveRebounds: string;
 }
 
-export default function PlayerGameLog({ stats }: { stats: PlayerStats[] }) {
+export default function PlayerGameLog({ stats, teamColor }: { stats: PlayerStats[]; teamColor: string }) {
   const [expanded, setExpanded] = useState(false);
 
   const displayed = expanded ? stats : stats.slice(0, 10);
@@ -39,27 +40,26 @@ export default function PlayerGameLog({ stats }: { stats: PlayerStats[] }) {
       ? (stats.reduce((sum, s) => sum + parseFloat((s[key] as string) || "0"), 0) / n).toFixed(1)
       : "0.0";
 
+  const avgPct = (key: keyof PlayerStats) =>
+    n > 0
+      ? (stats.reduce((sum, s) => sum + parseFloat((s[key] as string) || "0"), 0) / n * 100).toFixed(1) + '%'
+      : "0.0%";
+
   const aggregates = [
     { label: "MIN", value: avg("minutes") },
-    { label: "PTS", value: avg("points") },
-    { label: "REB", value: avg("rebounds") },
-    { label: "AST", value: avg("assists") },
     { label: "STL", value: avg("steals") },
     { label: "BLK", value: avg("blocks") },
     { label: "TOV", value: avg("turnovers") },
-    { label: "FG%", value: avg("fieldGoalPercentage") },
-    { label: "3P%", value: avg("fieldGoalThreePercentage") },
-    { label: "FT%", value: avg("freeThrowPercentage") },
+    { label: "FG%", value: avgPct("fieldGoalPercentage") },
+    { label: "3P%", value: avgPct("fieldGoalThreePercentage") },
+    { label: "FT%", value: avgPct("freeThrowPercentage") },
   ];
 
   return (
     <div className="flex gap-4 items-start">
       <div className="flex flex-col gap-2">
         {aggregates.map(({ label, value }) => (
-          <div key={label} className="bg-card border border-edge rounded-md px-4 py-2 text-center min-w-[60px]">
-            <div className="text-xs text-muted font-medium uppercase tracking-wide">{label}</div>
-            <div className="text-lg font-bold text-primary">{value}</div>
-          </div>
+          <TeamInfoNote key={label} title={label} info={value} teamColor={teamColor} />
         ))}
       </div>
 
@@ -88,13 +88,13 @@ export default function PlayerGameLog({ stats }: { stats: PlayerStats[] }) {
                   <td className="px-4 py-2.5 text-secondary">{playerStats.turnovers}</td>
                   <td className="px-4 py-2.5 text-secondary">{playerStats.fieldGoalsMade}</td>
                   <td className="px-4 py-2.5 text-secondary">{playerStats.fieldGoalsAttempted}</td>
-                  <td className="px-4 py-2.5 text-secondary">{playerStats.fieldGoalPercentage}</td>
+                  <td className="px-4 py-2.5 text-secondary">{playerStats.fieldGoalPercentage ? (parseFloat(playerStats.fieldGoalPercentage) * 100).toFixed(1) + '%' : '—'}</td>
                   <td className="px-4 py-2.5 text-secondary">{playerStats.fieldGoalThreePointsMade}</td>
                   <td className="px-4 py-2.5 text-secondary">{playerStats.fieldGoalThreeAttempted}</td>
-                  <td className="px-4 py-2.5 text-secondary">{playerStats.fieldGoalThreePercentage}</td>
+                  <td className="px-4 py-2.5 text-secondary">{playerStats.fieldGoalThreePercentage ? (parseFloat(playerStats.fieldGoalThreePercentage) * 100).toFixed(1) + '%' : '—'}</td>
                   <td className="px-4 py-2.5 text-secondary">{playerStats.freeThrowsMade}</td>
                   <td className="px-4 py-2.5 text-secondary">{playerStats.freeThrowsAttempted}</td>
-                  <td className="px-4 py-2.5 text-secondary">{playerStats.freeThrowPercentage}</td>
+                  <td className="px-4 py-2.5 text-secondary">{playerStats.freeThrowPercentage ? (parseFloat(playerStats.freeThrowPercentage) * 100).toFixed(1) + '%' : '—'}</td>
                   <td className="px-4 py-2.5 text-secondary">{playerStats.offensiveRebounds}</td>
                   <td className="px-4 py-2.5 text-secondary">{playerStats.defensiveRebounds}</td>
                   <td className="px-4 py-2.5 text-secondary">{playerStats.personalFouls}</td>

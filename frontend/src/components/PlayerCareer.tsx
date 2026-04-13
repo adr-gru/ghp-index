@@ -48,6 +48,8 @@ interface CareerTotals {
   ftm: number;
   fta: number;
   ftPct: number;
+  oreb: number;
+  dreb: number;
 }
 
 interface PlayerCareerProps {

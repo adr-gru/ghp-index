@@ -90,7 +90,7 @@ export default function PlayerTabs({
       </div>
 
       {/* Tab Content */}
-      {activeTab === "Last Games" && <PlayerGameLog stats={stats} />}
+      {activeTab === "Last Games" && <PlayerGameLog stats={stats} teamColor={teamColor} />}
       {activeTab === "Projections" && <NBAPlayerProjection projection={projection} teamColor={teamColor} />}
       {activeTab === "Shots" && (
         <ShotsFilter apiUrl={apiUrl} initialPlayerId={String(playerId)} initialTeamId={String(teamId)} />
