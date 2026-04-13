@@ -70,7 +70,9 @@ export default function NBAPlayerComparison({
     try {
       const res = await fetch(`${apiUrl}/api/players/${playerId}/career/`);
       const data = await res.json();
-      const totalsData = data.info.resultSets[2].rowSet[0];
+      // Use the last row of resultSets[0] which contains complete career totals
+      const regularSeasonData = data.info.resultSets[0];
+      const totalsData = regularSeasonData.rowSet[regularSeasonData.rowSet.length - 1];
 
       const gp = totalsData[6];
       return {
@@ -174,7 +176,7 @@ export default function NBAPlayerComparison({
                   className="object-cover object-top"
                 />
               </div>
-              <div className="font-bold text-primary">{currentPlayerName}</div>
+              <div className="font-bold text-white">{currentPlayerName}</div>
               <div className="text-xs text-secondary mt-1">{currentPlayerStats.gp} Career Games</div>
             </div>
             <div className="flex items-center justify-center">
@@ -189,7 +191,7 @@ export default function NBAPlayerComparison({
                   className="object-cover object-top"
                 />
               </div>
-              <div className="font-bold text-primary">{selectedPlayer.full_name}</div>
+              <div className="font-bold text-white">{selectedPlayer.full_name}</div>
               <div className="text-xs text-secondary mt-1">{comparePlayerStats.gp} Career Games</div>
             </div>
           </div>
