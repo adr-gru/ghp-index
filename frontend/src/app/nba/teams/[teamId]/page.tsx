@@ -9,15 +9,27 @@ import ShotsFilter from "@/components/ShotsFilter";
 
 export async function generateMetadata({ params }: TeamPageProps) {
   const { teamId } = await params;
-  const response = await fetch(`${process.env.API_URL}/api/teams/${teamId}`);
-  const team = await response.json();
 
-  const city = team.info.resultSets[0].rowSet[0][2];
-  const name = team.info.resultSets[0].rowSet[0][3];
+  try {
+    const response = await fetch(`${process.env.API_URL}/api/teams/${teamId}`, {
+      next: { revalidate: 1800 }, // Cache for 30 minutes
+      signal: AbortSignal.timeout(15000), // 15 second timeout
+    });
 
-  return {
-    title: `${city} ${name} | GHP-Index`,
-  };
+    if (!response.ok) {
+      return { title: 'NBA Team | GHP-Index' };
+    }
+
+    const team = await response.json();
+    const city = team.info.resultSets[0].rowSet[0][2];
+    const name = team.info.resultSets[0].rowSet[0][3];
+
+    return {
+      title: `${city} ${name} | GHP-Index`,
+    };
+  } catch (error) {
+    return { title: 'NBA Team | GHP-Index' };
+  }
 }
 
 interface TeamPageProps {
@@ -29,8 +41,31 @@ interface TeamPageProps {
 export default async function TeamPage({ params }: TeamPageProps) {
   const { teamId } = await params;
 
-  const response = await fetch(`${process.env.API_URL}/api/teams/${teamId}`);
-  const team = await response.json();
+  let team, gamelog;
+
+  try {
+    const response = await fetch(`${process.env.API_URL}/api/teams/${teamId}`, {
+      next: { revalidate: 1800 }, // Cache for 30 minutes
+      signal: AbortSignal.timeout(15000), // 15 second timeout
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch team data: ${response.status}`);
+    }
+
+    team = await response.json();
+  } catch (error) {
+    console.error('Error fetching team data:', error);
+    return (
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="bg-card rounded-md border border-edge p-8 text-center">
+          <h1 className="text-2xl font-bold text-primary mb-2">Unable to load team data</h1>
+          <p className="text-secondary">The NBA API is currently unavailable. Please try again later.</p>
+        </div>
+      </div>
+    );
+  }
+
   const teamInfo = team.info.resultSets[0].rowSet.map((team: string[]) => ({
     teamId: team[0],
     seasonYear: team[1],
@@ -91,8 +126,17 @@ export default async function TeamPage({ params }: TeamPageProps) {
     playerId: player[14],
   }))
 
-  const gamelogResponse = await fetch(`${process.env.API_URL}/api/${teamId}/teamgamelog/`);
-  const gamelog = gamelogResponse.ok ? await gamelogResponse.json() : null;
+  try {
+    const gamelogResponse = await fetch(`${process.env.API_URL}/api/${teamId}/teamgamelog/`, {
+      next: { revalidate: 600 }, // Cache for 10 minutes
+      signal: AbortSignal.timeout(15000), // 15 second timeout
+    });
+    gamelog = gamelogResponse.ok ? await gamelogResponse.json() : null;
+  } catch (error) {
+    console.error('Error fetching game log:', error);
+    gamelog = null;
+  }
+
   const games = (gamelog?.info.resultSets[0].rowSet ?? []).map((game: string[]) => ({
     teamId: game[0],
     gameId: game[1],
