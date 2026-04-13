@@ -8,6 +8,7 @@ const leagues = [
   { label: "NFL", href: "/nfl" },
   { label: "MLB", href: "/mlb" },
   { label: "NHL", href: "/nhl" },
+  { label: "About", href: "/about" },
 ];
 
 export default function NavBar() {
