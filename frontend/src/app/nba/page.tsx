@@ -7,7 +7,10 @@ export const metadata = {
 export default async function NbaPage() {
 
   const response = await fetch(`${process.env.API_URL}/api/teams`);
-  const teams = await response.json();
+  const data = await response.json();
+
+  // Handle if data is not an array (error case)
+  const teams = Array.isArray(data) ? data : [];
 
   return (
     <main className="max-w-7xl mx-auto px-6 py-8">
