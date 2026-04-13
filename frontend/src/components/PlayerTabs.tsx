@@ -68,15 +68,15 @@ export default function PlayerTabs({
   return (
     <div>
       {/* Tab Nav */}
-      <div className="flex gap-1 border-b border-[#334155] mb-6">
+      <div className="flex gap-1 border-b border-edge mb-6">
         {tabs.map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 text-sm font-medium transition-colors
               ${activeTab === tab
-                ? "border-b-2 border-[#38bdf8] text-[#38bdf8]"
-                : "text-[#0f172a] hover:text-[#0f172a]"}`}
+                ? "border-b-2 border-accent text-accent"
+                : "text-muted hover:text-primary"}`}
           >
             {tab}
           </button>

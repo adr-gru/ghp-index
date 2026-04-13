@@ -63,9 +63,9 @@ export default async function PlayerPage({ params }: PlayerPageProps) {
     fetch(`${process.env.API_URL}/api/players/${playerId}/playergamelog/`),
     fetch(`${process.env.API_URL}/api/players/${playerId}/projection/`),
   ]);
-  const playerlog = await playerlogResponse.json();
-  const projection = await projectionResponse.json();
-  const playerLogs = playerlog.info.resultSets[0].rowSet.map((game: string[]) => ({
+  const playerlog = playerlogResponse.ok ? await playerlogResponse.json() : null;
+  const projection = projectionResponse.ok ? await projectionResponse.json() : null;
+  const playerLogs = (playerlog?.info.resultSets[0].rowSet ?? []).map((game: string[]) => ({
     playerStatsDate: game[3],
     matchup: game[4],
     winLoss: game[5],
@@ -91,13 +91,17 @@ export default async function PlayerPage({ params }: PlayerPageProps) {
     plusMinus: game[25],
   }));
 
-  const { points, assists, rebounds } = playerHeadlineStats[0];
+  const { points, assists, rebounds } = playerHeadlineStats[0] ?? {
+    points: null,
+    assists: null,
+    rebounds: null,
+  };
 
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-10">
       {/* Player Hero */}
-      <div className="bg-[#1e293b] rounded-md border border-[#334155] p-8 flex items-start gap-8">
+      <div className="bg-card rounded-md border border-edge p-8 flex items-start gap-8">
         <div className="overflow-hidden shrink-0">
           <div className="relative w-40 h-32">
             <Image
@@ -109,43 +113,43 @@ export default async function PlayerPage({ params }: PlayerPageProps) {
           </div>
         </div>
         <div>
-          <h1 className="text-4xl font-bold text-[#f1f5f9] tracking-tight mb-1">{name}</h1>
-          <p className="text-sm text-[#94a3b8] mb-4">{city} {teamName} · #{jersey} · {position}</p>
+          <h1 className="text-4xl font-bold text-primary tracking-tight mb-1">{name}</h1>
+          <p className="text-sm text-secondary mb-4">{city} {teamName} · #{jersey} · {position}</p>
           <div className="flex gap-3">
-            <TeamInfoNote title="Points" info={points} />
-            <TeamInfoNote title="Assists" info={assists} />
-            <TeamInfoNote title="Rebounds" info={rebounds} />
+            <TeamInfoNote title="Points" info={points ?? "—"} />
+            <TeamInfoNote title="Assists" info={assists ?? "—"} />
+            <TeamInfoNote title="Rebounds" info={rebounds ?? "—"} />
           </div>
         </div>
-        <div className="h-40 w-px bg-[#334155] ml-auto"></div>
+        <div className="h-40 w-px bg-edge ml-auto"></div>
         <dl className="flex flex-col gap-1.5 text-sm shrink-0">
           <div className="flex gap-2">
-            <dt className="text-[#94a3b8]">Birthdate</dt>
-            <dd className="text-[#f1f5f9]">{birthday.split("T")[0]}</dd>
+            <dt className="text-secondary">Birthdate</dt>
+            <dd className="text-primary">{birthday?.split("T")[0] ?? "—"}</dd>
           </div>
           <div className="flex gap-2">
-            <dt className="text-[#94a3b8]">Birthplace</dt>
-            <dd className="text-[#f1f5f9]">{country}</dd>
+            <dt className="text-secondary">Birthplace</dt>
+            <dd className="text-primary">{country}</dd>
           </div>
           <div className="flex gap-2">
-            <dt className="text-[#94a3b8]">School</dt>
-            <dd className="text-[#f1f5f9]">{school}</dd>
+            <dt className="text-secondary">School</dt>
+            <dd className="text-primary">{school}</dd>
           </div>
           <div className="flex gap-2">
-            <dt className="text-[#94a3b8]">Height</dt>
-            <dd className="text-[#f1f5f9]">{height}</dd>
+            <dt className="text-secondary">Height</dt>
+            <dd className="text-primary">{height}</dd>
           </div>
           <div className="flex gap-2">
-            <dt className="text-[#94a3b8]">Weight</dt>
-            <dd className="text-[#f1f5f9]">{weight} lbs</dd>
+            <dt className="text-secondary">Weight</dt>
+            <dd className="text-primary">{weight} lbs</dd>
           </div>
           <div className="flex gap-2">
-            <dt className="text-[#94a3b8]">Draft Year</dt>
-            <dd className="text-[#f1f5f9]">{draftYear}</dd>
+            <dt className="text-secondary">Draft Year</dt>
+            <dd className="text-primary">{draftYear}</dd>
           </div>
           <div className="flex gap-2">
-            <dt className="text-[#94a3b8]">Status</dt>
-            <dd className="text-[#f1f5f9]">{rosterStatus}</dd>
+            <dt className="text-secondary">Status</dt>
+            <dd className="text-primary">{rosterStatus}</dd>
           </div>
         </dl>
       </div>

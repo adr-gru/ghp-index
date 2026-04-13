@@ -12,7 +12,7 @@ export default function PlayerCard({ id, fullName, playerNumber, position }: Pla
   return (
     <Link
       href={`/nba/players/${id}`}
-      className="bg-[#1e293b] rounded-md border border-[#334155] p-3 hover:border-[#38bdf8] transition-colors w-44">
+      className="bg-card rounded-md border border-edge p-3 hover:border-accent transition-colors w-44">
       <div className="overflow-hidden mb-3">
         <div className="relative w-full h-28">
           <Image
@@ -23,8 +23,8 @@ export default function PlayerCard({ id, fullName, playerNumber, position }: Pla
           />
         </div>
       </div>
-      <p className="font-semibold text-[#f1f5f9] text-sm leading-tight">{fullName}</p>
-      <p className="text-xs text-[#94a3b8] mt-0.5">#{playerNumber} · {position}</p>
+      <p className="font-semibold text-primary text-sm leading-tight">{fullName}</p>
+      <p className="text-xs text-secondary mt-0.5">#{playerNumber} · {position}</p>
     </Link>
   );
 }

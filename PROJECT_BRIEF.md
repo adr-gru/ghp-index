@@ -1,6 +1,6 @@
 # GHP-Index: Sports Statistics Web Application
 
-> **Last Updated:** April 8, 2026
+> **Last Updated:** April 13, 2026
 > **Project Owner:** Adrian G. (4th Year CS Student)
 > **Purpose:** Portfolio project + skill development
 
@@ -35,15 +35,21 @@ GHP-Index is a web application that aggregates and displays statistics from the 
 - [x] `/api/players/{id}/projection` endpoint — EWMA + linregress trend for PTS/REB/AST and extended stats
 - [x] `NBAPlayerProjection.tsx` — built out with StatCard, trend indicators, projection range
 - [x] Roster panel on team page — 2-column scrollable grid sized to match GameLog height
+- [x] Dashboard page — league hub cards, scoreboard, league leaders (PPG/RPG/APG tabs), standings (East/West tabs), NBA teams grid
+- [x] Backend endpoints: `/api/games/today` (`ScoreboardV2`), `/api/leaders?stat=` (`LeagueLeaders`), `/api/standings` (`LeagueStandingsV3`)
+- [x] `DashboardLeaders.tsx` + `DashboardStandings.tsx` — client components with tabbed UI
+- [x] Dashboard fetches all data with `Promise.allSettled` — graceful fallback if any endpoint fails
+- [x] Team page `teamRanks[0]` null guard — post-season `TeamInfoCommon` returns empty rankings
 
 ### In Progress
-- [ ] Shot chart heatmap — `ShotChartDetail` endpoint integration
+- [ ] Shot chart heatmap — `ShotChartDetail` endpoint integration (endpoint done, frontend tab in progress)
 
 ### Known Issues (Fix Before Moving Forward)
 - [x] ~~Hardcoded backend URL~~ — replaced with `process.env.API_URL` via `.env.local`
 - [x] ~~Magic array indices~~ — team and player pages now use named mappings
-- [ ] **No error handling** — fetch calls crash when backend returns a non-JSON response. Known error: `Unexpected token 'I', "Internal S"... is not valid JSON` — FastAPI returns a plain text 500 for certain player/team IDs (likely `nba_api` failing on that request), then `response.json()` blows up. Fix: check `response.ok` before `.json()` on frontend; add `try/except` in FastAPI endpoints to return JSON error responses instead of plain text 500s
+- [ ] **No error handling on team/player pages** — fetch calls crash when backend returns a non-JSON response. Dashboard page is already guarded via `Promise.allSettled`. Team/player pages still need `try/catch` + fallback UI.
 - [x] ~~No active link state~~ — NavBar now highlights active route via `usePathname`
+- [x] ~~`teamRanks[0]` crash~~ — guarded with `?? {}` fallback; occurs post-season when `TeamInfoCommon` returns empty rankings
 
 ---
 
@@ -70,12 +76,12 @@ ghp-index/
 │   ├── src/
 │   │   ├── app/
 │   │   │   ├── layout.tsx              # Root layout — Header + NavBar live here
-│   │   │   ├── page.tsx                # Home/dashboard (Coming Soon placeholder)
+│   │   │   ├── page.tsx                # Dashboard — scoreboard, leaders, standings, team grid
 │   │   │   ├── globals.css
 │   │   │   ├── nba/
 │   │   │   │   ├── page.tsx            # NBA teams listing — WORKING
-│   │   │   │   ├── teams/[teamId]/page.tsx    # Team detail + roster + game log — WORKING
-│   │   │   │   └── players/[playerId]/page.tsx # Player profile — PARTIAL
+│   │   │   │   ├── teams/[teamId]/page.tsx    # Team detail + roster + game log + shot chart — WORKING
+│   │   │   │   └── players/[playerId]/page.tsx # Player profile + projections + shot chart — WORKING
 │   │   │   ├── nfl/page.tsx            # Placeholder
 │   │   │   ├── mlb/page.tsx            # Placeholder
 │   │   │   ├── nhl/page.tsx            # Placeholder
@@ -85,7 +91,16 @@ ghp-index/
 │   │   │   ├── NavBar.tsx
 │   │   │   ├── TeamCard.tsx
 │   │   │   ├── PlayerCard.tsx
-│   │   │   └── GameLog.tsx             # Expandable game stats table
+│   │   │   ├── GameLog.tsx             # Expandable game stats table
+│   │   │   ├── PlayerGameLog.tsx
+│   │   │   ├── PlayerTabs.tsx          # Last Games / Projections / Shot Chart tabs
+│   │   │   ├── NBAPlayerProjection.tsx # EWMA + trend projection card
+│   │   │   ├── NBAPlayerComparison.tsx
+│   │   │   ├── ShotChart.tsx           # SVG court + shot dot heatmap
+│   │   │   ├── ShotsFilter.tsx         # Shot chart filter controls
+│   │   │   ├── TeamInfoNote.tsx
+│   │   │   ├── DashboardLeaders.tsx    # League leaders with PPG/RPG/APG tabs
+│   │   │   └── DashboardStandings.tsx  # Standings with East/West tabs
 │   │   └── utils/
 │   │       └── states.ts               # City → state mapping
 │   ├── public/
@@ -101,21 +116,21 @@ ghp-index/
 
 ## Current Sprint
 
-> **Goal:** Finish the NBA section cleanly end-to-end before anything else.
+> **Goal:** Add error handling to team/player pages; then move to NBA Games view.
 
 ### Sprint Tasks (Priority Order)
 
 **Stability**
-- [ ] Add `try/catch` + fallback UI to all fetch calls (show error message if backend is down)
-
-**Player Projections** ✅
-- [x] Add `/api/players/{id}/projection` endpoint to FastAPI backend
-- [x] Build out `NBAPlayerProjection.tsx` component
-- [ ] Wire component into the Projections tab in `PlayerTabs.tsx` (currently shows stub)
+- [ ] Add `try/catch` + fallback UI to team page fetch calls
+- [ ] Add `try/catch` + fallback UI to player page fetch calls
+- [ ] Add `try/except` in FastAPI endpoints to return JSON error responses instead of plain text 500s
 
 **Polish**
-- [x] Add active link highlighting to NavBar (show current page)
 - [ ] Add team page link on player page hero (city + team name → `/nba/teams/{teamId}`)
+
+**NBA Games View (next)**
+- [ ] Backend: `/api/games/{game_id}/boxscore` endpoint
+- [ ] Scores page with game cards linking to box score view
 
 
 ---
@@ -197,19 +212,16 @@ Key columns returned: `LOC_X`, `LOC_Y`, `SHOT_MADE_FLAG`, `SHOT_ZONE_BASIC`, `SH
 2. Scores page with game cards
 3. Box score view for individual games
 
-### Phase 4: NBA Dashboard
-**Widgets (no new backend endpoint needed):**
-1. League hub cards — big nav cards for NBA/NFL/MLB/NHL (pure UI, no data fetch)
-2. Quick-access team grid — all 30 teams via existing `/api/teams` + `TeamCard`
-3. Featured player spotlight — headshot + last 3 games via existing player endpoints + `PlayerCard`
+### Phase 4: NBA Dashboard ✅
+**Completed:**
+1. League hub cards — NBA/NFL/MLB/NHL nav cards (NFL/MLB/NHL greyed out, not yet built)
+2. NBA team grid — all 30 teams via `/api/teams` + `TeamCard`
+3. Scoreboard — today's matchups with scores via `/api/games/today` (`ScoreboardV2`)
+4. League leaders — top 10 PPG/RPG/APG (tabbed) via `/api/leaders` (`LeagueLeaders`)
+5. Standings — East/West conference table (tabbed) via `/api/standings` (`LeagueStandingsV3`)
 
-**Widgets (requires new backend endpoint):**
-4. Scoreboard — today's matchups with scores → new `/api/games/today` (nba_api: `ScoreboardV2`)
-5. League leaders — top 5 in PPG/RPG/APG with Recharts bar chart → new `/api/leaders` (nba_api: `LeagueLeaders`)
-6. Standings — East/West conference table → new `/api/standings` (nba_api: `LeagueStandingsV3`)
-
-**Other:**
-7. Search across players and teams
+**Remaining:**
+6. Search across players and teams
 
 ### Phase 5: NBA Enhanced Features
 1. Player comparison tool (side-by-side stats)
@@ -268,6 +280,7 @@ Key columns returned: `LOC_X`, `LOC_Y`, `SHOT_MADE_FLAG`, `SHOT_ZONE_BASIC`, `SH
 | Apr 6, 2026 | 7 | Replaced all hardcoded API URLs with `process.env.API_URL`; fixed team page index mappings (wins/losses off-by-one due to undocumented TEAM_SLUG column); added division, conference rank, win%, since year to team hero; updated PROJECT_BRIEF.md |
 | Apr 6, 2026 | 8 | Total visual redesign (Uncodixfy): Slate Noir dark palette (`#0f172a`/`#1e293b`/`#38bdf8`); removed all white cards, oversized border radii, eyebrow labels, zebra stripes, shadow effects; NavBar active route highlighting; `<dl>/<dt>/<dd>` for hero info lists; `NBAPlayerProjection` styled to match; all 14 files updated |
 | Apr 8, 2026 | 9 | Projection endpoint built (`/api/players/{id}/projection`) with EWMA + linregress trend; `NBAPlayerProjection.tsx` completed with StatCard components; extended numeric columns added (FG%, 3P%, FT%, OREB/DREB, STL, BLK, TOV); team page roster panel refactored to 2-col scrollable grid alongside GameLog; identified `get_team_logs` bug; added Shot Chart heatmap sprint to PROJECT_BRIEF.md |
+| Apr 13, 2026 | 10 | Dashboard page built (Phase 4): league hub cards, scoreboard, league leaders (PPG/RPG/APG tabs), standings (East/West tabs), NBA teams grid; 3 new backend endpoints (`/api/games/today`, `/api/leaders`, `/api/standings`); `DashboardLeaders.tsx` + `DashboardStandings.tsx` client components; `Promise.allSettled` for graceful per-section error handling; fixed team page crash when `teamRanks[0]` is undefined post-season |
 
 ---
 

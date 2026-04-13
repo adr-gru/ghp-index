@@ -63,8 +63,13 @@ export default async function TeamPage({ params }: TeamPageProps) {
     opponentsPointsPerGame: team[10],
   }))
 
-  const { pointsPerGame, reboundsPerGame, assistsPerGame } = teamRanks[0];
-  const { city, teamName, wins, losses, teamAbr, conference, teamDivision, divisionRank, conferenceRank, PCT, minYear } = teamInfo[0];
+  const computed = team.computed_stats ?? null;
+  const { pointsPerGame, reboundsPerGame, assistsPerGame } = teamRanks[0] ?? {
+    pointsPerGame: computed?.ppg ?? "—",
+    reboundsPerGame: computed?.rpg ?? "—",
+    assistsPerGame: computed?.apg ?? "—",
+  };
+  const { city, teamName, wins, losses, teamAbr, conference, teamDivision, divisionRank, conferenceRank, minYear } = teamInfo[0] ?? {};
   const record = `${wins}–${losses}`;
   const location = `${city}, ${findStateAbr(city)}`;
   const roster = team.roster.resultSets[0].rowSet.map((player: string[]) => ({
@@ -85,8 +90,8 @@ export default async function TeamPage({ params }: TeamPageProps) {
   }))
 
   const gamelogResponse = await fetch(`${process.env.API_URL}/api/${teamId}/teamgamelog/`);
-  const gamelog = await gamelogResponse.json();
-  const games = gamelog.info.resultSets[0].rowSet.map((game: string[]) => ({
+  const gamelog = gamelogResponse.ok ? await gamelogResponse.json() : null;
+  const games = (gamelog?.info.resultSets[0].rowSet ?? []).map((game: string[]) => ({
     teamId: game[0],
     gameId: game[1],
     gameDate: game[2],
@@ -119,7 +124,7 @@ export default async function TeamPage({ params }: TeamPageProps) {
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-10">
       {/* Team Hero */}
-      <div className="bg-[#1e293b] rounded-md border border-[#334155] p-8 flex items-center gap-8">
+      <div className="bg-card rounded-md border border-edge p-8 flex items-center gap-8">
         <div className="relative w-32 h-32 shrink-0">
           <Image
             src={`https://cdn.nba.com/logos/nba/${teamId}/primary/L/logo.svg`}
@@ -128,35 +133,35 @@ export default async function TeamPage({ params }: TeamPageProps) {
           />
         </div>
         <div>
-          <h1 className="text-4xl font-bold text-[#f1f5f9] tracking-tight">{city} {teamName}</h1>
-          <p className="text-[#94a3b8] font-medium mt-1">{record} · {teamAbr} · {conference}</p>
+          <h1 className="text-4xl font-bold text-primary tracking-tight">{city} {teamName}</h1>
+          <p className="text-secondary font-medium mt-1">{record} · {teamAbr} · {conference}</p>
           <div className="flex gap-3 mt-4">
             <TeamInfoNote title="Points" info={pointsPerGame} />
             <TeamInfoNote title="Assists" info={assistsPerGame} />
             <TeamInfoNote title="Rebounds" info={reboundsPerGame} />
           </div>
         </div>
-        <div className="h-40 w-px bg-[#334155] ml-auto"></div>
+        <div className="h-40 w-px bg-edge ml-auto"></div>
         <dl className="flex flex-col gap-1.5 text-sm shrink-0">
           <div className="flex gap-2">
-            <dt className="text-[#94a3b8]">Location</dt>
-            <dd className="text-[#f1f5f9]">{location}</dd>
+            <dt className="text-secondary">Location</dt>
+            <dd className="text-primary">{location}</dd>
           </div>
           <div className="flex gap-2">
-            <dt className="text-[#94a3b8]">Division</dt>
-            <dd className="text-[#f1f5f9]">{teamDivision}</dd>
+            <dt className="text-secondary">Division</dt>
+            <dd className="text-primary">{teamDivision}</dd>
           </div>
           <div className="flex gap-2">
-            <dt className="text-[#94a3b8]">Div. Rank</dt>
-            <dd className="text-[#f1f5f9]">{divisionRank}</dd>
+            <dt className="text-secondary">Div. Rank</dt>
+            <dd className="text-primary">{divisionRank}</dd>
           </div>
           <div className="flex gap-2">
-            <dt className="text-[#94a3b8]">Conf. Rank</dt>
-            <dd className="text-[#f1f5f9]">{conferenceRank}</dd>
+            <dt className="text-secondary">Conf. Rank</dt>
+            <dd className="text-primary">{conferenceRank}</dd>
           </div>
           <div className="flex gap-2">
-            <dt className="text-[#94a3b8]">Since</dt>
-            <dd className="text-[#f1f5f9]">{minYear}</dd>
+            <dt className="text-secondary">Since</dt>
+            <dd className="text-primary">{minYear}</dd>
           </div>
         </dl>
       </div>
@@ -164,7 +169,7 @@ export default async function TeamPage({ params }: TeamPageProps) {
       {/* Roster + Game Log */}
       <div className="flex gap-6 items-start">
         <div>
-          <h2 className="text-xl font-bold text-[#0f172a] mb-4">Roster</h2>
+          <h2 className="text-xl font-bold text-primary mb-4">Roster</h2>
           <div className="grid grid-cols-2 gap-3 overflow-y-auto h-[380px] pr-1">
             {roster.map((player: { playerId: number; playerName: string; position: string; playerNumber: number }) => (
               <PlayerCard
@@ -178,14 +183,14 @@ export default async function TeamPage({ params }: TeamPageProps) {
           </div>
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="text-xl font-bold text-[#0f172a] mb-4">Last Games</h2>
+          <h2 className="text-xl font-bold text-primary mb-4">Last Games</h2>
           <GameLog games={games} />
         </div>
       </div>
 
       {/* Shot Chart */}
-      <div className="bg-[#1e293b] rounded-md border border-[#334155] p-6">
-        <h2 className="text-xl font-bold text-[#f1f5f9] mb-6">Shot Chart</h2>
+      <div className="bg-card rounded-md border border-edge p-6">
+        <h2 className="text-xl font-bold text-primary mb-6">Shot Chart</h2>
         <ShotsFilter
           apiUrl={process.env.API_URL!}
           initialTeamId={teamId}

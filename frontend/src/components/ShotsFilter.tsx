@@ -28,7 +28,6 @@ interface Shot {
 
 interface ShotsFilterProps {
   apiUrl: string
-  // Omit a list to lock that dimension (dropdown hidden, initial ID used)
   players?: Player[]
   teams?: Team[]
   initialPlayerId?: string
@@ -78,14 +77,13 @@ export default function ShotsFilter({
     <div className="space-y-6">
       {/* Controls */}
       <div className="flex flex-wrap gap-4 items-end">
-        {/* Player dropdown — only shown when list is provided */}
         {players && (
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-[#94a3b8]">Player (optional)</label>
+            <label className="text-xs text-secondary">Player (optional)</label>
             <select
               value={playerId}
               onChange={(e) => setPlayerId(e.target.value)}
-              className="bg-[#1e293b] border border-[#334155] text-[#f1f5f9] text-sm rounded px-3 py-2 min-w-[220px] focus:outline-none focus:border-[#3b82f6]"
+              className="bg-card border border-edge text-primary text-sm rounded px-3 py-2 min-w-[220px] focus:outline-none focus:border-accent"
             >
               <option value="">— All Players —</option>
               {players.map((p) => (
@@ -97,13 +95,12 @@ export default function ShotsFilter({
           </div>
         )}
 
-        {/* Shot type */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-[#94a3b8]">Shot Type</label>
+          <label className="text-xs text-secondary">Shot Type</label>
           <select
             value={context}
             onChange={(e) => setContext(e.target.value)}
-            className="bg-[#1e293b] border border-[#334155] text-[#f1f5f9] text-sm rounded px-3 py-2 focus:outline-none focus:border-[#3b82f6]"
+            className="bg-card border border-edge text-primary text-sm rounded px-3 py-2 focus:outline-none focus:border-accent"
           >
             <option value="FGA">FGA — All field goals</option>
             <option value="FG3A">FG3A — 3-point attempts</option>
@@ -116,14 +113,13 @@ export default function ShotsFilter({
           </select>
         </div>
 
-        {/* Team dropdown — only shown when list is provided */}
         {teams && (
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-[#94a3b8]">Team (optional)</label>
+            <label className="text-xs text-secondary">Team (optional)</label>
             <select
               value={teamId}
               onChange={(e) => setTeamId(e.target.value)}
-              className="bg-[#1e293b] border border-[#334155] text-[#f1f5f9] text-sm rounded px-3 py-2 min-w-[180px] focus:outline-none focus:border-[#3b82f6]"
+              className="bg-card border border-edge text-primary text-sm rounded px-3 py-2 min-w-[180px] focus:outline-none focus:border-accent"
             >
               <option value="">— All Teams —</option>
               {teams.map((t) => (
@@ -135,28 +131,26 @@ export default function ShotsFilter({
           </div>
         )}
 
-        {loading && <p className="text-sm text-[#94a3b8] self-end pb-2">Loading…</p>}
+        {loading && <p className="text-sm text-secondary self-end pb-2">Loading…</p>}
       </div>
 
-      {/* Error */}
       {error && <p className="text-sm text-red-400">{error}</p>}
 
-      {/* Summary */}
       {shots && (
         <div className="flex gap-4 text-sm">
-          <span className="text-[#94a3b8]">
-            Total: <span className="text-[#f1f5f9] font-medium">{shots.length}</span>
+          <span className="text-secondary">
+            Total: <span className="text-primary font-medium">{shots.length}</span>
           </span>
-          <span className="text-[#94a3b8]">
+          <span className="text-secondary">
             Made: <span className="text-green-400 font-medium">{made}</span>
           </span>
-          <span className="text-[#94a3b8]">
+          <span className="text-secondary">
             Missed: <span className="text-red-400 font-medium">{missed}</span>
           </span>
           {shots.length > 0 && (
-            <span className="text-[#94a3b8]">
+            <span className="text-secondary">
               FG%:{" "}
-              <span className="text-[#f1f5f9] font-medium">
+              <span className="text-primary font-medium">
                 {((made / shots.length) * 100).toFixed(1)}%
               </span>
             </span>
@@ -167,7 +161,7 @@ export default function ShotsFilter({
       {shots && shots.length > 0 && <ShotChart shots={shots} />}
 
       {shots && shots.length === 0 && (
-        <p className="text-sm text-[#94a3b8]">No shots found for this selection.</p>
+        <p className="text-sm text-secondary">No shots found for this selection.</p>
       )}
     </div>
   )
