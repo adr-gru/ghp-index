@@ -79,7 +79,7 @@ export default function TeamPage() {
   if (error || !team) {
     return (
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="bg-card rounded-md border border-edge p-8 text-center space-y-4">
+        <div className="bg-card rounded-md border border-edge p-6 text-center space-y-4">
           <div className="text-6xl">⚠️</div>
           <h1 className="text-2xl font-bold text-primary">Unable to load team data</h1>
           <p className="text-secondary">{error || "Unknown error occurred"}</p>
@@ -185,27 +185,27 @@ export default function TeamPage() {
   }));
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8 space-y-10">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8 sm:space-y-10">
       {/* Team Hero */}
-      <div className="bg-card rounded-md border border-edge p-8 flex items-center gap-8" style={{ borderTopColor: teamColor }}>
-        <div className="relative w-32 h-32 shrink-0">
+      <div className="bg-card rounded-md border border-edge p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6 sm:gap-8" style={{ borderTopColor: teamColor }}>
+        <div className="relative w-24 h-24 sm:w-32 sm:h-32 shrink-0">
           <Image
             src={`https://cdn.nba.com/logos/nba/${teamId}/primary/L/logo.svg`}
             alt="Team Logo"
             fill
           />
         </div>
-        <div>
-          <h1 className="text-4xl font-bold text-primary tracking-tight">{city} {teamName}</h1>
+        <div className="text-center sm:text-left">
+          <h1 className="text-3xl sm:text-4xl font-bold text-primary tracking-tight">{city} {teamName}</h1>
           <p className="text-secondary font-medium mt-1">{record} · {teamAbr} · {conference}</p>
-          <div className="flex gap-3 mt-4">
+          <div className="flex gap-3 mt-4 justify-center sm:justify-start">
             <TeamInfoNote title="Points" info={pointsPerGame} teamColor={teamColor} />
             <TeamInfoNote title="Assists" info={assistsPerGame} teamColor={teamColor} />
             <TeamInfoNote title="Rebounds" info={reboundsPerGame} teamColor={teamColor} />
           </div>
         </div>
-        <div className="h-40 w-px ml-auto" style={{ backgroundColor: teamColor, opacity: 0.4 }}></div>
-        <dl className="flex flex-col gap-1.5 text-sm shrink-0">
+        <div className="hidden sm:block h-40 w-px sm:ml-auto" style={{ backgroundColor: teamColor, opacity: 0.4 }}></div>
+        <dl className="grid grid-cols-2 sm:flex sm:flex-col gap-x-6 gap-y-1.5 text-sm shrink-0 w-full sm:w-auto">
           <div className="flex gap-2">
             <dt className="text-secondary">Location</dt>
             <dd className="text-primary">{location}</dd>
@@ -230,7 +230,7 @@ export default function TeamPage() {
       </div>
 
       {/* Roster + Game Log */}
-      <div className="flex gap-6 items-start">
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
         <div>
           <h2 className="text-xl font-bold text-primary mb-4">Roster</h2>
           <div className="grid grid-cols-2 gap-3 overflow-y-auto h-[380px] pr-1">
@@ -275,14 +275,14 @@ export default function TeamPage() {
 
 function TeamPageSkeleton() {
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8 space-y-10 animate-pulse">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8 sm:space-y-10 animate-pulse">
       {/* Hero Skeleton */}
-      <div className="bg-card rounded-md border border-edge p-8 flex items-center gap-8">
-        <div className="w-32 h-32 bg-zinc-700 rounded-md shrink-0"></div>
-        <div className="flex-1 space-y-3">
-          <div className="h-10 bg-zinc-700 rounded w-1/2"></div>
-          <div className="h-6 bg-zinc-700 rounded w-1/3"></div>
-          <div className="flex gap-3 mt-4">
+      <div className="bg-card rounded-md border border-edge p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
+        <div className="w-24 h-24 sm:w-32 sm:h-32 bg-zinc-700 rounded-md shrink-0"></div>
+        <div className="flex-1 space-y-3 w-full">
+          <div className="h-10 bg-zinc-700 rounded w-1/2 mx-auto sm:mx-0"></div>
+          <div className="h-6 bg-zinc-700 rounded w-1/3 mx-auto sm:mx-0"></div>
+          <div className="flex gap-3 mt-4 justify-center sm:justify-start">
             <div className="h-16 bg-zinc-700 rounded w-24"></div>
             <div className="h-16 bg-zinc-700 rounded w-24"></div>
             <div className="h-16 bg-zinc-700 rounded w-24"></div>
@@ -291,8 +291,8 @@ function TeamPageSkeleton() {
       </div>
 
       {/* Roster + Games Skeleton */}
-      <div className="flex gap-6">
-        <div className="w-1/2">
+      <div className="flex flex-col lg:flex-row gap-6">
+        <div className="w-full lg:w-1/2">
           <div className="h-8 bg-zinc-700 rounded w-32 mb-4"></div>
           <div className="grid grid-cols-2 gap-3">
             {[1, 2, 3, 4].map((i) => (

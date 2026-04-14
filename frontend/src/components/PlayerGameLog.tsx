@@ -56,8 +56,8 @@ export default function PlayerGameLog({ stats, teamColor }: { stats: PlayerStats
   ];
 
   return (
-    <div className="flex gap-4 items-start">
-      <div className="flex flex-col gap-2">
+    <div className="flex flex-col sm:flex-row gap-4 items-start">
+      <div className="flex flex-row flex-wrap sm:flex-col gap-2">
         {aggregates.map(({ label, value }) => (
           <TeamInfoNote key={label} title={label} info={value} teamColor={teamColor} />
         ))}

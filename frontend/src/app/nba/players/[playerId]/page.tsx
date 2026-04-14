@@ -83,7 +83,7 @@ export default function PlayerPage() {
   if (error || !player) {
     return (
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="bg-card rounded-md border border-edge p-8 text-center space-y-4">
+        <div className="bg-card rounded-md border border-edge p-6 text-center space-y-4">
           <div className="text-6xl">⚠️</div>
           <h1 className="text-2xl font-bold text-primary">Unable to load player data</h1>
           <p className="text-secondary">{error || "Unknown error occurred"}</p>
@@ -165,11 +165,11 @@ export default function PlayerPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8 space-y-10">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8 sm:space-y-10">
       {/* Player Hero */}
-      <div className="bg-card rounded-md border border-edge p-8 flex items-start gap-8" style={{ borderTopColor: teamColor }}>
+      <div className="bg-card rounded-md border border-edge p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6 sm:gap-8" style={{ borderTopColor: teamColor }}>
         <div className="overflow-hidden shrink-0">
-          <div className="relative w-40 h-32">
+          <div className="relative w-32 h-24 sm:w-40 sm:h-32">
             <Image
               src={`https://cdn.nba.com/headshots/nba/latest/1040x760/${playerId}.png`}
               alt="Player Headshot"
@@ -178,17 +178,17 @@ export default function PlayerPage() {
             />
           </div>
         </div>
-        <div>
-          <h1 className="text-4xl font-bold text-primary tracking-tight mb-1">{name}</h1>
+        <div className="text-center sm:text-left">
+          <h1 className="text-3xl sm:text-4xl font-bold text-primary tracking-tight mb-1">{name}</h1>
           <p className="text-sm text-secondary mb-4">{city} {teamName} · #{jersey} · {position}</p>
-          <div className="flex gap-3">
+          <div className="flex gap-3 justify-center sm:justify-start">
             <TeamInfoNote title="Points" info={points ?? "—"} teamColor={teamColor} />
             <TeamInfoNote title="Assists" info={assists ?? "—"} teamColor={teamColor} />
             <TeamInfoNote title="Rebounds" info={rebounds ?? "—"} teamColor={teamColor} />
           </div>
         </div>
-        <div className="h-40 w-px ml-auto" style={{ backgroundColor: teamColor, opacity: 0.4 }}></div>
-        <dl className="flex flex-col gap-1.5 text-sm shrink-0">
+        <div className="hidden sm:block h-40 w-px sm:ml-auto" style={{ backgroundColor: teamColor, opacity: 0.4 }}></div>
+        <dl className="grid grid-cols-2 sm:flex sm:flex-col gap-x-6 gap-y-1.5 text-sm shrink-0 w-full sm:w-auto">
           <div className="flex gap-2">
             <dt className="text-secondary">Birthdate</dt>
             <dd className="text-primary">{birthday?.split("T")[0] ?? "—"}</dd>
@@ -237,20 +237,20 @@ export default function PlayerPage() {
 
 function PlayerPageSkeleton() {
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8 space-y-10 animate-pulse">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8 sm:space-y-10 animate-pulse">
       {/* Hero Skeleton */}
-      <div className="bg-card rounded-md border border-edge p-8 flex items-start gap-8">
-        <div className="w-40 h-32 bg-zinc-700 rounded-md shrink-0"></div>
-        <div className="flex-1 space-y-3">
-          <div className="h-10 bg-zinc-700 rounded w-1/2"></div>
-          <div className="h-6 bg-zinc-700 rounded w-1/3"></div>
-          <div className="flex gap-3 mt-4">
+      <div className="bg-card rounded-md border border-edge p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
+        <div className="w-32 h-24 sm:w-40 sm:h-32 bg-zinc-700 rounded-md shrink-0"></div>
+        <div className="flex-1 space-y-3 w-full">
+          <div className="h-10 bg-zinc-700 rounded w-1/2 mx-auto sm:mx-0"></div>
+          <div className="h-6 bg-zinc-700 rounded w-1/3 mx-auto sm:mx-0"></div>
+          <div className="flex gap-3 mt-4 justify-center sm:justify-start">
             <div className="h-16 bg-zinc-700 rounded w-24"></div>
             <div className="h-16 bg-zinc-700 rounded w-24"></div>
             <div className="h-16 bg-zinc-700 rounded w-24"></div>
           </div>
         </div>
-        <div className="space-y-2">
+        <div className="grid grid-cols-2 sm:flex sm:flex-col gap-2 w-full sm:w-auto">
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="h-6 bg-zinc-700 rounded w-32"></div>
           ))}
