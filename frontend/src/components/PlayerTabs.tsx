@@ -74,12 +74,12 @@ export default function PlayerTabs({
   return (
     <div>
       {/* Tab Nav */}
-      <div className="flex gap-1 border-b border-edge mb-6">
+      <div className="flex gap-1 border-b border-edge mb-6 overflow-x-auto scrollbar-hide">
         {tabs.map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-sm font-medium transition-colors
+            className={`whitespace-nowrap px-4 py-2 text-sm font-medium transition-colors shrink-0
               ${activeTab === tab
                 ? "border-b-2 border-accent text-accent"
                 : "text-muted hover:text-primary"}`}

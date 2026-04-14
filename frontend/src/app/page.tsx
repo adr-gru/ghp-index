@@ -84,13 +84,13 @@ export default async function Home() {
   const recentGames = recentData?.games ?? [];
 
   return (
-    <main className="max-w-7xl mx-auto px-6 py-8 space-y-10">
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8 sm:space-y-10">
       {/* League Hub */}
       <section>
         <h2 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">
           Leagues
         </h2>
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {LEAGUES.map((league) => (
             <Link
               key={league.slug}
