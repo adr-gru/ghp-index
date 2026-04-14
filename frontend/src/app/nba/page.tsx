@@ -43,14 +43,14 @@ export default function NbaPage() {
 
   if (loading) {
     return (
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <div className="mb-6">
           <div className="h-8 bg-zinc-700 rounded w-48 mb-2 animate-pulse"></div>
           <div className="h-4 bg-zinc-700 rounded w-24 animate-pulse"></div>
         </div>
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {[...Array(30)].map((_, i) => (
-            <div key={i} className="h-32 bg-zinc-700 rounded animate-pulse"></div>
+            <div key={i} className="h-24 bg-zinc-700 rounded animate-pulse"></div>
           ))}
         </div>
       </main>
@@ -59,8 +59,8 @@ export default function NbaPage() {
 
   if (error) {
     return (
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        <div className="bg-card rounded-md border border-edge p-8 text-center space-y-4">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="bg-card rounded-md border border-edge p-6 text-center space-y-4">
           <div className="text-6xl">⚠️</div>
           <h1 className="text-2xl font-bold text-primary">Unable to load teams</h1>
           <p className="text-secondary">{error}</p>
@@ -76,12 +76,12 @@ export default function NbaPage() {
   }
 
   return (
-    <main className="max-w-7xl mx-auto px-6 py-8">
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-primary">NBA Teams</h1>
         <p className="text-secondary text-sm mt-1">{teams.length} teams</p>
       </div>
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         {teams.map((team: { id: number; full_name: string; abbreviation: string }) => (
           <TeamCard
             key={team.id}
