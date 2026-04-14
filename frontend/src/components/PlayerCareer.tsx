@@ -188,103 +188,103 @@ export default function PlayerCareer({ playerId, apiUrl }: PlayerCareerProps) {
   return (
     <div className="space-y-6">
       {/* Career Totals & Averages */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-card border border-edge rounded-md p-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="bg-card border border-edge rounded-md p-4 sm:p-6">
           <h3 className="text-lg font-bold text-primary mb-4">Career Totals</h3>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <div className="text-xs text-muted uppercase tracking-wide">Games</div>
-              <div className="text-2xl font-bold text-primary">{careerData.careerTotals.gp}</div>
+              <div className="text-xl sm:text-2xl font-bold text-primary">{careerData.careerTotals.gp}</div>
             </div>
             <div>
               <div className="text-xs text-muted uppercase tracking-wide">Points</div>
-              <div className="text-2xl font-bold text-primary">{careerData.careerTotals.pts.toLocaleString()}</div>
+              <div className="text-xl sm:text-2xl font-bold text-primary">{careerData.careerTotals.pts.toLocaleString()}</div>
             </div>
             <div>
               <div className="text-xs text-muted uppercase tracking-wide">Rebounds</div>
-              <div className="text-2xl font-bold text-primary">{careerData.careerTotals.reb.toLocaleString()}</div>
+              <div className="text-xl sm:text-2xl font-bold text-primary">{careerData.careerTotals.reb.toLocaleString()}</div>
             </div>
             <div>
               <div className="text-xs text-muted uppercase tracking-wide">Assists</div>
-              <div className="text-2xl font-bold text-primary">{careerData.careerTotals.ast.toLocaleString()}</div>
+              <div className="text-xl sm:text-2xl font-bold text-primary">{careerData.careerTotals.ast.toLocaleString()}</div>
             </div>
             <div>
               <div className="text-xs text-muted uppercase tracking-wide">Steals</div>
-              <div className="text-2xl font-bold text-primary">{careerData.careerTotals.stl.toLocaleString()}</div>
+              <div className="text-xl sm:text-2xl font-bold text-primary">{careerData.careerTotals.stl.toLocaleString()}</div>
             </div>
             <div>
               <div className="text-xs text-muted uppercase tracking-wide">Blocks</div>
-              <div className="text-2xl font-bold text-primary">{careerData.careerTotals.blk.toLocaleString()}</div>
+              <div className="text-xl sm:text-2xl font-bold text-primary">{careerData.careerTotals.blk.toLocaleString()}</div>
             </div>
           </div>
         </div>
 
-        <div className="bg-card border border-edge rounded-md p-6">
+        <div className="bg-card border border-edge rounded-md p-4 sm:p-6">
           <h3 className="text-lg font-bold text-primary mb-4">Career Averages</h3>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <div className="text-xs text-muted uppercase tracking-wide">PPG</div>
-              <div className="text-2xl font-bold text-primary">{careerAvgs.ppg}</div>
+              <div className="text-xl sm:text-2xl font-bold text-primary">{careerAvgs.ppg}</div>
             </div>
             <div>
               <div className="text-xs text-muted uppercase tracking-wide">RPG</div>
-              <div className="text-2xl font-bold text-primary">{careerAvgs.rpg}</div>
+              <div className="text-xl sm:text-2xl font-bold text-primary">{careerAvgs.rpg}</div>
             </div>
             <div>
               <div className="text-xs text-muted uppercase tracking-wide">APG</div>
-              <div className="text-2xl font-bold text-primary">{careerAvgs.apg}</div>
+              <div className="text-xl sm:text-2xl font-bold text-primary">{careerAvgs.apg}</div>
             </div>
             <div>
               <div className="text-xs text-muted uppercase tracking-wide">FG%</div>
-              <div className="text-2xl font-bold text-primary">{careerAvgs.fgPct}%</div>
+              <div className="text-xl sm:text-2xl font-bold text-primary">{careerAvgs.fgPct}%</div>
             </div>
             <div>
               <div className="text-xs text-muted uppercase tracking-wide">3P%</div>
-              <div className="text-2xl font-bold text-primary">{careerAvgs.fg3Pct}%</div>
+              <div className="text-xl sm:text-2xl font-bold text-primary">{careerAvgs.fg3Pct}%</div>
             </div>
             <div>
               <div className="text-xs text-muted uppercase tracking-wide">FT%</div>
-              <div className="text-2xl font-bold text-primary">{careerAvgs.ftPct}%</div>
+              <div className="text-xl sm:text-2xl font-bold text-primary">{careerAvgs.ftPct}%</div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Career Highs */}
-      <div className="bg-card border border-edge rounded-md p-6">
+      <div className="bg-card border border-edge rounded-md p-4 sm:p-6">
         <h3 className="text-lg font-bold text-primary mb-4">Career Highs (Season Averages)</h3>
-        <div className="grid grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
           <div>
             <div className="text-xs text-muted mb-1 uppercase tracking-wide">Points</div>
-            <div className="text-3xl font-bold text-accent">{careerHighs.pts.toFixed(1)}</div>
+            <div className="text-2xl sm:text-3xl font-bold text-accent">{careerHighs.pts.toFixed(1)}</div>
           </div>
           <div>
             <div className="text-xs text-muted mb-1 uppercase tracking-wide">Rebounds</div>
-            <div className="text-3xl font-bold text-accent">{careerHighs.reb.toFixed(1)}</div>
+            <div className="text-2xl sm:text-3xl font-bold text-accent">{careerHighs.reb.toFixed(1)}</div>
           </div>
           <div>
             <div className="text-xs text-muted mb-1 uppercase tracking-wide">Assists</div>
-            <div className="text-3xl font-bold text-accent">{careerHighs.ast.toFixed(1)}</div>
+            <div className="text-2xl sm:text-3xl font-bold text-accent">{careerHighs.ast.toFixed(1)}</div>
           </div>
           <div>
             <div className="text-xs text-muted mb-1 uppercase tracking-wide">Steals</div>
-            <div className="text-3xl font-bold text-accent">{careerHighs.stl.toFixed(1)}</div>
+            <div className="text-2xl sm:text-3xl font-bold text-accent">{careerHighs.stl.toFixed(1)}</div>
           </div>
           <div>
             <div className="text-xs text-muted mb-1 uppercase tracking-wide">Blocks</div>
-            <div className="text-3xl font-bold text-accent">{careerHighs.blk.toFixed(1)}</div>
+            <div className="text-2xl sm:text-3xl font-bold text-accent">{careerHighs.blk.toFixed(1)}</div>
           </div>
           <div>
             <div className="text-xs text-muted mb-1 uppercase tracking-wide">FG%</div>
-            <div className="text-3xl font-bold text-accent">{(careerHighs.fgPct * 100).toFixed(1)}%</div>
+            <div className="text-2xl sm:text-3xl font-bold text-accent">{(careerHighs.fgPct * 100).toFixed(1)}%</div>
           </div>
           <div>
             <div className="text-xs text-muted mb-1 uppercase tracking-wide">3P%</div>
-            <div className="text-3xl font-bold text-accent">{(careerHighs.fg3Pct * 100).toFixed(1)}%</div>
+            <div className="text-2xl sm:text-3xl font-bold text-accent">{(careerHighs.fg3Pct * 100).toFixed(1)}%</div>
           </div>
           <div>
             <div className="text-xs text-muted mb-1 uppercase tracking-wide">FT%</div>
-            <div className="text-3xl font-bold text-accent">{(careerHighs.ftPct * 100).toFixed(1)}%</div>
+            <div className="text-2xl sm:text-3xl font-bold text-accent">{(careerHighs.ftPct * 100).toFixed(1)}%</div>
           </div>
         </div>
       </div>
