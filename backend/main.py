@@ -11,6 +11,7 @@ import time
 import os
 import threading
 import diskcache as dc
+import requests
 
 app = FastAPI()
 
@@ -701,3 +702,259 @@ def get_cache_stats():
 def clear_cache():
     _cache.clear()
     return {"message": "Cache cleared successfully"}
+
+
+# ---------------------------------------------------------------------------
+# NFL endpoints — powered by ESPN public API
+# ---------------------------------------------------------------------------
+_NFL_ESPN_BASE = "https://site.api.espn.com/apis/site/v2/sports/football/nfl"
+_NFL_HEADERS = {"User-Agent": "ghp-index/1.0"}
+
+# Static conference / division mapping — won't change unless expansion
+_NFL_CONF_DIV: dict[str, tuple[str, str]] = {}
+for _conf, _divs in {
+    "AFC": {
+        "East":  ["BUF", "MIA", "NE",  "NYJ"],
+        "North": ["BAL", "CIN", "CLE", "PIT"],
+        "South": ["HOU", "IND", "JAX", "TEN"],
+        "West":  ["DEN", "KC",  "LV",  "LAC"],
+    },
+    "NFC": {
+        "East":  ["DAL", "NYG", "PHI", "WAS"],
+        "North": ["CHI", "DET", "GB",  "MIN"],
+        "South": ["ATL", "CAR", "NO",  "TB"],
+        "West":  ["ARI", "LAR", "SF",  "SEA"],
+    },
+}.items():
+    for _div, _abbrs in _divs.items():
+        for _abbr in _abbrs:
+            _NFL_CONF_DIV[_abbr] = (_conf, _div)
+
+
+def _espn_get(url: str, timeout: int = 10) -> dict:
+    resp = requests.get(url, timeout=timeout, headers=_NFL_HEADERS)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def _parse_nfl_record(record_obj: dict) -> tuple[str, int, int]:
+    """Extract (summary, wins, losses) from an ESPN record object."""
+    items = record_obj.get("items", [{}]) if record_obj else [{}]
+    first = items[0] if items else {}
+    summary = first.get("summary", "0-0")
+    stats = first.get("stats", [])
+    wins   = int(next((s["value"] for s in stats if s["name"] == "wins"),   0))
+    losses = int(next((s["value"] for s in stats if s["name"] == "losses"), 0))
+    return summary, wins, losses
+
+
+def _team_logo(t: dict) -> str:
+    logos = t.get("logos", [])
+    return logos[0]["href"] if logos else ""
+
+
+@app.get("/api/nfl/teams")
+def get_nfl_teams():
+    cache_key = "nfl_teams"
+    cached = cache_get(cache_key, ttl_minutes=60)
+    if cached:
+        return cached
+
+    try:
+        data = retry_api_call(
+            lambda: _espn_get(f"{_NFL_ESPN_BASE}/teams?limit=32")
+        )
+        raw = data["sports"][0]["leagues"][0]["teams"]
+
+        out = []
+        for item in raw:
+            t = item["team"]
+            abbr = t["abbreviation"]
+            conf, div = _NFL_CONF_DIV.get(abbr, ("", ""))
+            summary, wins, losses = _parse_nfl_record(item.get("record", {}))
+            out.append({
+                "id":              t["id"],
+                "abbreviation":    abbr,
+                "display_name":    t["displayName"],
+                "nickname":        t.get("nickname") or t.get("name", ""),
+                "location":        t.get("location", ""),
+                "color":           f"#{t.get('color', '1a1a1a')}",
+                "alternate_color": f"#{t.get('alternateColor', 'ffffff')}",
+                "logo":            _team_logo(t),
+                "conference":      conf,
+                "division":        div,
+                "record":          summary,
+                "wins":            wins,
+                "losses":          losses,
+            })
+
+        out.sort(key=lambda x: (x["conference"], x["division"], x["display_name"]))
+        cache_set(cache_key, out)
+        return out
+
+    except Exception as e:
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
+        raise HTTPException(status_code=503, detail=f"ESPN API error: {str(e)}")
+
+
+@app.get("/api/nfl/teams/{team_id}")
+def get_nfl_team(team_id: str):
+    cache_key = f"nfl_team_{team_id}"
+    cached = cache_get(cache_key, ttl_minutes=30)
+    if cached:
+        return cached
+
+    try:
+        data = retry_api_call(
+            lambda: _espn_get(f"{_NFL_ESPN_BASE}/teams/{team_id}")
+        )
+        t = data["team"]
+        abbr = t["abbreviation"]
+        conf, div = _NFL_CONF_DIV.get(abbr, ("", ""))
+        summary, wins, losses = _parse_nfl_record(t.get("record", {}))
+
+        # Schedule
+        sched_data = retry_api_call(
+            lambda: _espn_get(f"{_NFL_ESPN_BASE}/teams/{team_id}/schedule")
+        )
+        games = []
+        for event in sched_data.get("events", []):
+            comps = event.get("competitions", [{}])
+            comp  = comps[0] if comps else {}
+            competitors = comp.get("competitors", [])
+            status_type = comp.get("status", {}).get("type", {})
+            completed   = bool(status_type.get("completed", False))
+
+            home_comp = next((c for c in competitors if c.get("homeAway") == "home"), {})
+            away_comp = next((c for c in competitors if c.get("homeAway") == "away"), {})
+            home_team = home_comp.get("team", {})
+            away_team = away_comp.get("team", {})
+
+            is_home    = home_team.get("abbreviation") == abbr
+            this_comp  = home_comp if is_home else away_comp
+            opp_comp   = away_comp if is_home else home_comp
+            opp_team   = away_team if is_home else home_team
+
+            opp_logos  = opp_team.get("logos", [])
+            opp_logo   = opp_logos[0]["href"] if opp_logos else ""
+
+            result = ""
+            if completed:
+                if this_comp.get("winner"):
+                    result = "W"
+                elif opp_comp.get("winner"):
+                    result = "L"
+                else:
+                    result = "T"
+
+            def _score(comp_obj: dict) -> Optional[int]:
+                raw = comp_obj.get("score")
+                try:
+                    return int(raw) if raw is not None else None
+                except (ValueError, TypeError):
+                    return None
+
+            games.append({
+                "id":            event.get("id"),
+                "date":          event.get("date"),
+                "week":          event.get("week", {}).get("number"),
+                "opponent_abbr": opp_team.get("abbreviation", ""),
+                "opponent_id":   opp_team.get("id", ""),
+                "opponent_name": opp_team.get("displayName", ""),
+                "opponent_logo": opp_logo,
+                "is_home":       is_home,
+                "this_score":    _score(this_comp) if completed else None,
+                "opp_score":     _score(opp_comp)  if completed else None,
+                "result":        result,
+                "completed":     completed,
+                "status_text":   status_type.get("description", ""),
+            })
+
+        result_obj = {
+            "id":              t["id"],
+            "abbreviation":    abbr,
+            "display_name":    t["displayName"],
+            "nickname":        t.get("nickname") or t.get("name", ""),
+            "location":        t.get("location", ""),
+            "color":           f"#{t.get('color', '1a1a1a')}",
+            "alternate_color": f"#{t.get('alternateColor', 'ffffff')}",
+            "logo":            _team_logo(t),
+            "conference":      conf,
+            "division":        div,
+            "record":          summary,
+            "wins":            wins,
+            "losses":          losses,
+            "schedule":        games,
+        }
+        cache_set(cache_key, result_obj)
+        return result_obj
+
+    except Exception as e:
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
+        raise HTTPException(status_code=503, detail=f"ESPN API error: {str(e)}")
+
+
+@app.get("/api/nfl/scoreboard")
+def get_nfl_scoreboard():
+    cache_key = "nfl_scoreboard"
+    cached = cache_get(cache_key, ttl_minutes=5)
+    if cached:
+        return cached
+
+    try:
+        data = retry_api_call(
+            lambda: _espn_get(f"{_NFL_ESPN_BASE}/scoreboard")
+        )
+        games_out = []
+        for event in data.get("events", []):
+            comp        = (event.get("competitions") or [{}])[0]
+            competitors = comp.get("competitors", [])
+            status_type = comp.get("status", {}).get("type", {})
+            status_disp = comp.get("status", {}).get("displayClock", "")
+
+            home_comp = next((c for c in competitors if c.get("homeAway") == "home"), {})
+            away_comp = next((c for c in competitors if c.get("homeAway") == "away"), {})
+            home_team = home_comp.get("team", {})
+            away_team = away_comp.get("team", {})
+
+            def _rec(comp_obj):
+                recs = comp_obj.get("records", [])
+                return recs[0].get("summary", "") if recs else ""
+
+            games_out.append({
+                "id":          event.get("id"),
+                "date":        event.get("date"),
+                "name":        event.get("name"),
+                "status":      status_type.get("description", ""),
+                "completed":   bool(status_type.get("completed", False)),
+                "clock":       status_disp,
+                "period":      comp.get("status", {}).get("period", 0),
+                "home_id":     home_team.get("id"),
+                "home_abbr":   home_team.get("abbreviation"),
+                "home_logo":   _team_logo(home_team),
+                "home_score":  home_comp.get("score"),
+                "home_record": _rec(home_comp),
+                "away_id":     away_team.get("id"),
+                "away_abbr":   away_team.get("abbreviation"),
+                "away_logo":   _team_logo(away_team),
+                "away_score":  away_comp.get("score"),
+                "away_record": _rec(away_comp),
+            })
+
+        result = {
+            "games":  games_out,
+            "season": data.get("season", {}).get("year"),
+            "week":   data.get("week", {}).get("number"),
+        }
+        cache_set(cache_key, result)
+        return result
+
+    except Exception as e:
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
+        raise HTTPException(status_code=503, detail=f"ESPN API error: {str(e)}")
