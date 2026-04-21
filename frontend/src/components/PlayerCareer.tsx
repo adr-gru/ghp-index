@@ -91,64 +91,71 @@ export default function PlayerCareer({ playerId, apiUrl }: PlayerCareerProps) {
         const careerTotalsData  = data.info.resultSets[1];
         const playoffData       = data.info.resultSets[2];
 
-        const parseSeasonStats = (rowSet: any[]): SeasonStats[] => {
-          return rowSet.map((row: any[]) => ({
-            seasonId: row[1],
-            teamAbbreviation: row[4],
-            playerAge: row[5],
-            gp: row[6],
-            gs: row[7],
-            min: parseFloat(row[8]) || 0,
-            fgm: parseFloat(row[9]) || 0,
-            fga: parseFloat(row[10]) || 0,
-            fgPct: parseFloat(row[11]) || 0,
-            fg3m: parseFloat(row[12]) || 0,
-            fg3a: parseFloat(row[13]) || 0,
-            fg3Pct: parseFloat(row[14]) || 0,
-            ftm: parseFloat(row[15]) || 0,
-            fta: parseFloat(row[16]) || 0,
-            ftPct: parseFloat(row[17]) || 0,
-            oreb: parseFloat(row[18]) || 0,
-            dreb: parseFloat(row[19]) || 0,
-            reb: parseFloat(row[20]) || 0,
-            ast: parseFloat(row[21]) || 0,
-            stl: parseFloat(row[22]) || 0,
-            blk: parseFloat(row[23]) || 0,
-            tov: parseFloat(row[24]) || 0,
-            pf: parseFloat(row[25]) || 0,
-            pts: parseFloat(row[26]) || 0,
+        // Use header names so column-order differences between result sets
+        // (e.g. CareerTotals has no SEASON_ID) never cause index mismatches.
+        const makeIdx = (headers: string[]) => (name: string) => headers.indexOf(name);
+
+        const parseSeasonStats = (resultSet: { headers: string[]; rowSet: any[][] }): SeasonStats[] => {
+          const i = makeIdx(resultSet.headers);
+          return resultSet.rowSet.map((row) => ({
+            seasonId:         row[i("SEASON_ID")] ?? "",
+            teamAbbreviation: row[i("TEAM_ABBREVIATION")] ?? "",
+            playerAge:        row[i("PLAYER_AGE")] ?? 0,
+            gp:               row[i("GP")] ?? 0,
+            gs:               row[i("GS")] ?? 0,
+            min:  parseFloat(row[i("MIN")])    || 0,
+            fgm:  parseFloat(row[i("FGM")])    || 0,
+            fga:  parseFloat(row[i("FGA")])    || 0,
+            fgPct:  parseFloat(row[i("FG_PCT")])  || 0,
+            fg3m: parseFloat(row[i("FG3M")])   || 0,
+            fg3a: parseFloat(row[i("FG3A")])   || 0,
+            fg3Pct: parseFloat(row[i("FG3_PCT")]) || 0,
+            ftm:  parseFloat(row[i("FTM")])    || 0,
+            fta:  parseFloat(row[i("FTA")])    || 0,
+            ftPct:  parseFloat(row[i("FT_PCT")])  || 0,
+            oreb: parseFloat(row[i("OREB")])   || 0,
+            dreb: parseFloat(row[i("DREB")])   || 0,
+            reb:  parseFloat(row[i("REB")])    || 0,
+            ast:  parseFloat(row[i("AST")])    || 0,
+            stl:  parseFloat(row[i("STL")])    || 0,
+            blk:  parseFloat(row[i("BLK")])    || 0,
+            tov:  parseFloat(row[i("TOV")])    || 0,
+            pf:   parseFloat(row[i("PF")])     || 0,
+            pts:  parseFloat(row[i("PTS")])    || 0,
           }));
         };
 
-        // Career totals come from their own dedicated result set (index 1)
-        const totalsRow = careerTotalsData.rowSet[0];
-        const totals: CareerTotals = {
-          gp: totalsRow[6],
-          gs: totalsRow[7],
-          min: parseFloat(totalsRow[8]) || 0,
-          fgm: parseFloat(totalsRow[9]) || 0,
-          fga: parseFloat(totalsRow[10]) || 0,
-          fgPct: parseFloat(totalsRow[11]) || 0,
-          fg3m: parseFloat(totalsRow[12]) || 0,
-          fg3a: parseFloat(totalsRow[13]) || 0,
-          fg3Pct: parseFloat(totalsRow[14]) || 0,
-          ftm: parseFloat(totalsRow[15]) || 0,
-          fta: parseFloat(totalsRow[16]) || 0,
-          ftPct: parseFloat(totalsRow[17]) || 0,
-          oreb: parseFloat(totalsRow[18]) || 0,
-          dreb: parseFloat(totalsRow[19]) || 0,
-          reb: parseFloat(totalsRow[20]) || 0,
-          ast: parseFloat(totalsRow[21]) || 0,
-          stl: parseFloat(totalsRow[22]) || 0,
-          blk: parseFloat(totalsRow[23]) || 0,
-          tov: parseFloat(totalsRow[24]) || 0,
-          pts: parseFloat(totalsRow[26]) || 0,
+        const parseTotals = (resultSet: { headers: string[]; rowSet: any[][] }): CareerTotals => {
+          const i = makeIdx(resultSet.headers);
+          const row = resultSet.rowSet[0];
+          return {
+            gp:  row[i("GP")] ?? 0,
+            gs:  row[i("GS")] ?? 0,
+            min:    parseFloat(row[i("MIN")])    || 0,
+            fgm:    parseFloat(row[i("FGM")])    || 0,
+            fga:    parseFloat(row[i("FGA")])    || 0,
+            fgPct:  parseFloat(row[i("FG_PCT")])  || 0,
+            fg3m:   parseFloat(row[i("FG3M")])   || 0,
+            fg3a:   parseFloat(row[i("FG3A")])   || 0,
+            fg3Pct: parseFloat(row[i("FG3_PCT")]) || 0,
+            ftm:    parseFloat(row[i("FTM")])    || 0,
+            fta:    parseFloat(row[i("FTA")])    || 0,
+            ftPct:  parseFloat(row[i("FT_PCT")])  || 0,
+            oreb:   parseFloat(row[i("OREB")])   || 0,
+            dreb:   parseFloat(row[i("DREB")])   || 0,
+            reb:    parseFloat(row[i("REB")])    || 0,
+            ast:    parseFloat(row[i("AST")])    || 0,
+            stl:    parseFloat(row[i("STL")])    || 0,
+            blk:    parseFloat(row[i("BLK")])    || 0,
+            tov:    parseFloat(row[i("TOV")])    || 0,
+            pts:    parseFloat(row[i("PTS")])    || 0,
+          };
         };
 
         setCareerData({
-          seasonStats: parseSeasonStats(regularSeasonData.rowSet),
-          playoffStats: parseSeasonStats(playoffData.rowSet),
-          careerTotals: totals,
+          seasonStats:   parseSeasonStats(regularSeasonData),
+          playoffStats:  parseSeasonStats(playoffData ?? { headers: [], rowSet: [] }),
+          careerTotals:  parseTotals(careerTotalsData),
         });
         setLoading(false);
       })
