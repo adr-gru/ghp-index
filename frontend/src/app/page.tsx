@@ -4,6 +4,9 @@ import DashboardStandings from "@/components/DashboardStandings";
 import DashboardLeaders from "@/components/DashboardLeaders";
 import RecentGamesBar from "@/components/RecentGamesBar";
 import DashboardScoreboard from "@/components/DashboardScoreboard";
+import MLBScoreboard from "@/components/MLBScoreboard";
+import MLBStandings from "@/components/MLBStandings";
+import MLBLeaders from "@/components/MLBLeaders";
 
 export const metadata = {
   title: "Dashboard | GHP-Index",
@@ -12,7 +15,7 @@ export const metadata = {
 const LEAGUES = [
   { name: "NBA", slug: "nba", active: true },
   { name: "NFL", slug: "nfl", active: false },
-  { name: "MLB", slug: "mlb", active: false },
+  { name: "MLB", slug: "mlb", active: true },
   { name: "NHL", slug: "nhl", active: false },
 ];
 
@@ -88,8 +91,32 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Scoreboard — client component with date navigation */}
-      <DashboardScoreboard />
+      {/* MLB Section */}
+      <section className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-semibold text-muted uppercase tracking-wider">MLB</h2>
+          <Link href="/mlb" className="text-xs text-accent hover:underline">View all →</Link>
+        </div>
+
+        {/* MLB Scores */}
+        <MLBScoreboard />
+
+        {/* MLB Standings + Leaders */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          <div className="lg:col-span-2">
+            <MLBStandings />
+          </div>
+          <div>
+            <MLBLeaders />
+          </div>
+        </div>
+      </section>
+
+      {/* NBA Scoreboard — client component with date navigation */}
+      <section>
+        <h2 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">NBA Scores</h2>
+        <DashboardScoreboard />
+      </section>
 
       {/* Recent Results */}
       {recentGames.length > 0 && <RecentGamesBar games={recentGames} />}

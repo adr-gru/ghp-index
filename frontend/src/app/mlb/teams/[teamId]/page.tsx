@@ -135,7 +135,6 @@ export default function MLBTeamPage() {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="bg-card border border-edge rounded-md p-6 text-center space-y-4">
-          <div className="text-5xl">⚾</div>
           <h1 className="text-2xl font-bold text-primary">Unable to load team</h1>
           <p className="text-secondary">{error ?? "Unknown error"}</p>
           <button

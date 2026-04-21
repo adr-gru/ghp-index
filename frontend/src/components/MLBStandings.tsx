@@ -31,7 +31,7 @@ function shortDivision(div: string): string {
 
 function DivisionTable({ division }: { division: Division }) {
   const label = shortDivision(division.division);
-  const isAL = division.league === "American League";
+  const isAL = division.league === "American League" || division.division.startsWith("American");
 
   return (
     <div className="bg-card border border-edge rounded-md overflow-hidden">
@@ -147,8 +147,12 @@ export default function MLBStandings() {
     );
   }
 
-  const alDivisions = divisions.filter((d) => d.league === "American League");
-  const nlDivisions = divisions.filter((d) => d.league === "National League");
+  const alDivisions = divisions.filter(
+    (d) => d.league === "American League" || d.division.startsWith("American")
+  );
+  const nlDivisions = divisions.filter(
+    (d) => d.league === "National League" || d.division.startsWith("National")
+  );
 
   return (
     <div className="space-y-6">

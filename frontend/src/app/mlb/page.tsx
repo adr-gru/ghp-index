@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import MLBTeamCard from "@/components/MLBTeamCard";
 import MLBStandings from "@/components/MLBStandings";
 import MLBScoreboard from "@/components/MLBScoreboard";
@@ -18,10 +19,6 @@ interface MLBTeam {
   league: string;
 }
 
-type Tab = "Teams" | "Standings" | "Scores" | "Leaders";
-const TABS: Tab[] = ["Teams", "Standings", "Scores", "Leaders"];
-
-// Long division names grouped
 const DIVISION_ORDER = [
   "American League East",
   "American League Central",
@@ -39,7 +36,6 @@ export default function MlbPage() {
   const [teams, setTeams] = useState<MLBTeam[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>("Teams");
 
   const fetchTeams = async () => {
     setLoading(true);
@@ -62,41 +58,6 @@ export default function MlbPage() {
 
   useEffect(() => { fetchTeams(); }, []);
 
-  if (loading) {
-    return (
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <div className="mb-6">
-          <div className="h-8 bg-zinc-700 rounded w-32 mb-2 animate-pulse" />
-          <div className="h-4 bg-zinc-700 rounded w-40 animate-pulse" />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          {[...Array(30)].map((_, i) => (
-            <div key={i} className="h-16 bg-zinc-700 rounded animate-pulse" />
-          ))}
-        </div>
-      </main>
-    );
-  }
-
-  if (error) {
-    return (
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <div className="bg-card rounded-md border border-edge p-6 text-center space-y-4">
-          <div className="text-5xl">⚾</div>
-          <h1 className="text-2xl font-bold text-primary">Unable to load teams</h1>
-          <p className="text-secondary">{error}</p>
-          <button
-            onClick={fetchTeams}
-            className="px-6 py-2 bg-accent text-white rounded-md font-medium hover:bg-blue-600 transition-colors"
-          >
-            Retry
-          </button>
-        </div>
-      </main>
-    );
-  }
-
-  // Group teams by division (preserving DIVISION_ORDER)
   const teamsByDivision = DIVISION_ORDER.map((div) => ({
     division: div,
     league: div.startsWith("American") ? "American League" : "National League",
@@ -104,99 +65,110 @@ export default function MlbPage() {
   })).filter((g) => g.teams.length > 0);
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-10">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3">
-          <span className="text-3xl" aria-hidden>⚾</span>
-          <div>
-            <h1 className="text-2xl font-bold text-primary">MLB</h1>
-            <p className="text-secondary text-sm mt-0.5">
-              {teams.length} teams · 2025 season
-            </p>
-          </div>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-primary">MLB</h1>
+        <p className="text-secondary text-sm mt-1">
+          {loading ? "Loading…" : `${teams.length} teams · 2025 season`}
+        </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-edge mb-6 overflow-x-auto scrollbar-hide">
-        {TABS.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap shrink-0 ${
-              activeTab === tab
-                ? "border-b-2 border-accent text-accent"
-                : "text-muted hover:text-primary"
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
+      {/* Scores widget */}
+      <section>
+        <h2 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">
+          Scores
+        </h2>
+        <MLBScoreboard />
+      </section>
 
-      {/* Teams — grouped by division */}
-      {activeTab === "Teams" && (
-        <div className="space-y-8">
-          {/* AL / NL sections */}
-          {(["American League", "National League"] as const).map((league) => {
-            const leagueGroups = teamsByDivision.filter((g) => g.league === league);
-            const isAL = league === "American League";
-            return (
-              <div key={league}>
-                <div className="flex items-center gap-2 mb-4">
-                  <span
-                    className="text-xs font-bold px-2 py-0.5 rounded text-white"
-                    style={{ backgroundColor: isAL ? "#003087" : "#C41E3A" }}
-                  >
-                    {isAL ? "AL" : "NL"}
-                  </span>
-                  <h2 className="text-sm font-semibold text-primary">{league}</h2>
-                </div>
-                <div className="space-y-5">
-                  {leagueGroups.map((group) => (
-                    <div key={group.division}>
-                      <h3 className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
-                        {shortDivision(group.division)}
-                      </h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-                        {group.teams.map((team) => (
-                          <MLBTeamCard
-                            key={team.id}
-                            id={team.id}
-                            name={team.name}
-                            abbreviation={team.abbreviation}
-                            division={team.division}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {/* Standings widget */}
+      <section>
+        <h2 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">
+          Standings
+        </h2>
+        <MLBStandings />
+      </section>
 
-      {/* Standings */}
-      {activeTab === "Standings" && <MLBStandings />}
-
-      {/* Scores */}
-      {activeTab === "Scores" && (
-        <div>
-          <h2 className="text-sm font-semibold text-muted uppercase tracking-wide mb-4">Game Scores</h2>
-          <MLBScoreboard />
-        </div>
-      )}
-
-      {/* Leaders */}
-      {activeTab === "Leaders" && (
-        <div className="max-w-sm">
-          <h2 className="text-sm font-semibold text-muted uppercase tracking-wide mb-4">League Leaders</h2>
+      {/* Leaders + Teams side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        {/* Leaders */}
+        <section>
+          <h2 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">
+            League Leaders
+          </h2>
           <MLBLeaders />
-        </div>
-      )}
+        </section>
+
+        {/* Teams by division */}
+        <section className="lg:col-span-2">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xs font-semibold text-muted uppercase tracking-wider">Teams</h2>
+          </div>
+
+          {loading && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {[...Array(12)].map((_, i) => (
+                <div key={i} className="h-14 bg-zinc-700 rounded animate-pulse" />
+              ))}
+            </div>
+          )}
+
+          {!loading && error && (
+            <div className="bg-card border border-edge rounded-md p-4 text-center space-y-2">
+              <p className="text-secondary text-sm">{error}</p>
+              <button
+                onClick={fetchTeams}
+                className="text-xs text-accent hover:underline"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          {!loading && !error && (
+            <div className="space-y-6">
+              {(["American League", "National League"] as const).map((league) => {
+                const isAL = league === "American League";
+                const groups = teamsByDivision.filter((g) => g.league === league);
+                return (
+                  <div key={league}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span
+                        className="text-[10px] font-bold px-1.5 py-0.5 rounded text-white"
+                        style={{ backgroundColor: isAL ? "#003087" : "#C41E3A" }}
+                      >
+                        {isAL ? "AL" : "NL"}
+                      </span>
+                      <span className="text-xs font-semibold text-primary">{league}</span>
+                    </div>
+                    <div className="space-y-4">
+                      {groups.map((group) => (
+                        <div key={group.division}>
+                          <p className="text-[10px] font-semibold text-muted uppercase tracking-widest mb-2">
+                            {shortDivision(group.division)}
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+                            {group.teams.map((team) => (
+                              <MLBTeamCard
+                                key={team.id}
+                                id={team.id}
+                                name={team.name}
+                                abbreviation={team.abbreviation}
+                                division={team.division}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      </div>
     </main>
   );
 }

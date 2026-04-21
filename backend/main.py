@@ -1141,7 +1141,14 @@ def get_mlb_standings():
         divisions = []
         for record in data.get("records", []):
             div_name = record.get("division", {}).get("name", "")
-            league = record.get("league", {}).get("name", "")
+            # Derive league from division name — more reliable than the league field
+            # since we don't hydrate "league" in this call.
+            if "American" in div_name:
+                league = "American League"
+            elif "National" in div_name:
+                league = "National League"
+            else:
+                league = record.get("league", {}).get("name", "")
 
             teams_in_div = []
             for tr in record.get("teamRecords", []):
