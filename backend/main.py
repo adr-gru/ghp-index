@@ -317,14 +317,18 @@ def project_stat(col: str, recent: pd.DataFrame, df: pd.DataFrame) -> dict:
 
 @app.get("/api/players/{player_id}/career/")
 def get_player_career(player_id: int):
-    cache_key = f"player_career_{player_id}"
+    cache_key = f"player_career_totals_{player_id}"
     cached = cache_get(cache_key, ttl_minutes=60)
     if cached:
         return cached
 
     try:
         def fetch_career():
-            return playercareerstats.PlayerCareerStats(player_id=player_id, timeout=9)
+            # Totals mode: resultSets[1] contains true career counting totals
+            # (PerGame default would give per-game averages there instead)
+            return playercareerstats.PlayerCareerStats(
+                player_id=player_id, per_mode36="Totals", timeout=9
+            )
 
         career_stats = retry_api_call(fetch_career)
         result = {"info": career_stats.get_dict()}
