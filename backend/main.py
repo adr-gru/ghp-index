@@ -400,6 +400,57 @@ def get_shots(
 # ---------------------------------------------------------------------------
 # Games / scores
 # ---------------------------------------------------------------------------
+def _parse_scoreboard(board) -> list:
+    """Shared helper: parse a ScoreboardV2 response into a list of game dicts."""
+    data = board.get_dict()
+    g_rs = data["resultSets"][0]
+    l_rs = data["resultSets"][1]
+    g_headers = g_rs["headers"]
+    l_headers = l_rs["headers"]
+
+    def g_idx(name): return g_headers.index(name)
+    def l_idx(name): return l_headers.index(name)
+
+    games: dict = {}
+    for row in g_rs["rowSet"]:
+        game_id = row[g_idx("GAME_ID")]
+        games[game_id] = {
+            "game_id": game_id,
+            "status": row[g_idx("GAME_STATUS_TEXT")],
+            "home_team_id": row[g_idx("HOME_TEAM_ID")],
+            "away_team_id": row[g_idx("VISITOR_TEAM_ID")],
+            "home_abbr": None, "away_abbr": None,
+            "home_city": None, "away_city": None,
+            "home_pts": None, "away_pts": None,
+            "home_record": None, "away_record": None,
+        }
+
+    for row in l_rs["rowSet"]:
+        game_id = row[l_idx("GAME_ID")]
+        team_id = row[l_idx("TEAM_ID")]
+        if game_id not in games:
+            continue
+        g = games[game_id]
+        entry = {
+            "abbr": row[l_idx("TEAM_ABBREVIATION")],
+            "city": row[l_idx("TEAM_CITY_NAME")],
+            "pts": row[l_idx("PTS")],
+            "record": row[l_idx("TEAM_WINS_LOSSES")],
+        }
+        if team_id == g["home_team_id"]:
+            g["home_abbr"] = entry["abbr"]
+            g["home_city"] = entry["city"]
+            g["home_pts"] = entry["pts"]
+            g["home_record"] = entry["record"]
+        else:
+            g["away_abbr"] = entry["abbr"]
+            g["away_city"] = entry["city"]
+            g["away_pts"] = entry["pts"]
+            g["away_record"] = entry["record"]
+
+    return list(games.values())
+
+
 @app.get("/api/games/today")
 def get_games_today():
     cache_key = "games_today"
@@ -409,57 +460,45 @@ def get_games_today():
 
     try:
         def fetch():
-            return scoreboardv2.ScoreboardV2()
+            return scoreboardv2.ScoreboardV2(timeout=9)
 
         board = retry_api_call(fetch)
-        data = board.get_dict()
+        result = {"games": _parse_scoreboard(board)}
+        cache_set(cache_key, result)
+        return result
 
-        g_rs = data["resultSets"][0]
-        l_rs = data["resultSets"][1]
-        g_headers = g_rs["headers"]
-        l_headers = l_rs["headers"]
+    except Exception as e:
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
+        raise HTTPException(status_code=503, detail=f"NBA API timeout or error: {str(e)}")
 
-        def g_idx(name): return g_headers.index(name)
-        def l_idx(name): return l_headers.index(name)
 
-        games = {}
-        for row in g_rs["rowSet"]:
-            game_id = row[g_idx("GAME_ID")]
-            games[game_id] = {
-                "game_id": game_id,
-                "status": row[g_idx("GAME_STATUS_TEXT")],
-                "home_team_id": row[g_idx("HOME_TEAM_ID")],
-                "away_team_id": row[g_idx("VISITOR_TEAM_ID")],
-                "home_abbr": None, "away_abbr": None,
-                "home_city": None, "away_city": None,
-                "home_pts": None, "away_pts": None,
-                "home_record": None, "away_record": None,
-            }
+@app.get("/api/games/scoreboard")
+def get_scoreboard(date: Optional[str] = None):
+    """Get scoreboard for any date. date param: YYYY-MM-DD (defaults to today)."""
+    if date:
+        try:
+            game_date = datetime.strptime(date, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    else:
+        game_date = datetime.now()
 
-        for row in l_rs["rowSet"]:
-            game_id = row[l_idx("GAME_ID")]
-            team_id = row[l_idx("TEAM_ID")]
-            if game_id not in games:
-                continue
-            g = games[game_id]
-            entry = {
-                "abbr": row[l_idx("TEAM_ABBREVIATION")],
-                "city": row[l_idx("TEAM_CITY_NAME")],
-                "pts": row[l_idx("PTS")],
-                "record": row[l_idx("TEAM_WINS_LOSSES")],
-            }
-            if team_id == g["home_team_id"]:
-                g["home_abbr"] = entry["abbr"]
-                g["home_city"] = entry["city"]
-                g["home_pts"] = entry["pts"]
-                g["home_record"] = entry["record"]
-            else:
-                g["away_abbr"] = entry["abbr"]
-                g["away_city"] = entry["city"]
-                g["away_pts"] = entry["pts"]
-                g["away_record"] = entry["record"]
+    date_str = game_date.strftime("%Y-%m-%d")
+    is_today = date_str == datetime.now().strftime("%Y-%m-%d")
+    ttl = 2 if is_today else 1440  # 2 min for today, 24 h for past dates
+    cache_key = f"games_scoreboard_{date_str}"
+    cached = cache_get(cache_key, ttl_minutes=ttl)
+    if cached:
+        return cached
 
-        result = {"games": list(games.values())}
+    try:
+        def fetch():
+            return scoreboardv2.ScoreboardV2(game_date=game_date.strftime("%m/%d/%Y"), timeout=9)
+
+        board = retry_api_call(fetch)
+        result = {"games": _parse_scoreboard(board), "date": date_str}
         cache_set(cache_key, result)
         return result
 

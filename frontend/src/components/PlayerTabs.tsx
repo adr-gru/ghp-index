@@ -6,6 +6,7 @@ import NBAPlayerProjection from "@/components/NBAPlayerProjection";
 import ShotsFilter from "@/components/ShotsFilter";
 import PlayerCareer from "@/components/PlayerCareer";
 import NBAPlayerComparison from "@/components/NBAPlayerComparison";
+import PlayerStatChart from "@/components/PlayerStatChart";
 
 interface PlayerStats {
   playerStatsDate: string;
@@ -90,7 +91,12 @@ export default function PlayerTabs({
       </div>
 
       {/* Tab Content */}
-      {activeTab === "Last Games" && <PlayerGameLog stats={stats} teamColor={teamColor} />}
+      {activeTab === "Last Games" && (
+        <>
+          {stats.length > 0 && <PlayerStatChart stats={stats} teamColor={teamColor} />}
+          <PlayerGameLog stats={stats} teamColor={teamColor} />
+        </>
+      )}
       {activeTab === "Projections" && <NBAPlayerProjection projection={projection} teamColor={teamColor} />}
       {activeTab === "Shots" && (
         <ShotsFilter apiUrl={apiUrl} initialPlayerId={String(playerId)} initialTeamId={String(teamId)} />

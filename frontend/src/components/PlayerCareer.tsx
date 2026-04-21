@@ -1,6 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
 
 interface SeasonStats {
   seasonId: string;
@@ -185,6 +195,31 @@ export default function PlayerCareer({ playerId, apiUrl }: PlayerCareerProps) {
     ftPct: (careerData.careerTotals.ftPct * 100).toFixed(1),
   };
 
+  const CAREER_STATS = [
+    { key: "pts", label: "PTS", color: "#3b82f6" },
+    { key: "reb", label: "REB", color: "#10b981" },
+    { key: "ast", label: "AST", color: "#f59e0b" },
+    { key: "stl", label: "STL", color: "#a855f7" },
+    { key: "blk", label: "BLK", color: "#ef4444" },
+  ] as const;
+  type CareerStatKey = (typeof CAREER_STATS)[number]["key"];
+
+  const [chartStat, setChartStat] = useState<CareerStatKey>("pts");
+
+  const chartData = careerData.seasonStats.map((s) => ({
+    season: s.seasonId.slice(-5),
+    team: s.teamAbbreviation,
+    value:
+      s.gp > 0
+        ? parseFloat(
+            (s[chartStat as keyof SeasonStats] as number / s.gp).toFixed(1)
+          )
+        : 0,
+  }));
+
+  const activeStat = CAREER_STATS.find((s) => s.key === chartStat)!;
+  const maxVal = Math.max(...chartData.map((d) => d.value), 0);
+
   return (
     <div className="space-y-6">
       {/* Career Totals & Averages */}
@@ -287,6 +322,68 @@ export default function PlayerCareer({ playerId, apiUrl }: PlayerCareerProps) {
             <div className="text-2xl sm:text-3xl font-bold text-accent">{(careerHighs.ftPct * 100).toFixed(1)}%</div>
           </div>
         </div>
+      </div>
+
+      {/* Career Stat Progression Chart */}
+      <div className="bg-card border border-edge rounded-md p-4 sm:p-6">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <h3 className="text-lg font-bold text-primary">Career Progression</h3>
+          <div className="flex gap-1 flex-wrap">
+            {CAREER_STATS.map((s) => (
+              <button
+                key={s.key}
+                onClick={() => setChartStat(s.key)}
+                style={chartStat === s.key ? { backgroundColor: s.color } : {}}
+                className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+                  chartStat === s.key
+                    ? "text-white"
+                    : "text-muted hover:text-primary bg-zinc-800"
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#2a2a3a" vertical={false} />
+            <XAxis
+              dataKey="season"
+              tick={{ fontSize: 9, fill: "#666" }}
+              axisLine={false}
+              tickLine={false}
+              interval="preserveStartEnd"
+            />
+            <YAxis
+              tick={{ fontSize: 9, fill: "#666" }}
+              axisLine={false}
+              tickLine={false}
+              domain={[0, Math.ceil(maxVal * 1.15) || 10]}
+            />
+            <Tooltip
+              contentStyle={{
+                background: "#1a1a2e",
+                border: "1px solid #333",
+                borderRadius: 6,
+                fontSize: 12,
+              }}
+              formatter={(v) => [typeof v === "number" ? v.toFixed(1) : String(v ?? ""), `${activeStat.label}/G`]}
+              labelFormatter={(label, payload) =>
+                `${label} · ${payload?.[0]?.payload?.team ?? ""}`
+              }
+              cursor={{ fill: "rgba(255,255,255,0.04)" }}
+            />
+            <Bar dataKey="value" radius={[3, 3, 0, 0]} maxBarSize={30}>
+              {chartData.map((_, i) => (
+                <Cell key={i} fill={activeStat.color} opacity={0.85} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+        <p className="text-[10px] text-muted mt-2">
+          Per-game averages by season · {chartData.length} seasons
+        </p>
       </div>
 
       {/* Season-by-Season Stats */}

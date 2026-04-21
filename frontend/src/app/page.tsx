@@ -1,9 +1,9 @@
 import Link from "next/link";
-import Image from "next/image";
 import TeamCard from "@/components/TeamCard";
 import DashboardStandings from "@/components/DashboardStandings";
 import DashboardLeaders from "@/components/DashboardLeaders";
 import RecentGamesBar from "@/components/RecentGamesBar";
+import DashboardScoreboard from "@/components/DashboardScoreboard";
 
 export const metadata = {
   title: "Dashboard | GHP-Index",
@@ -16,29 +16,13 @@ const LEAGUES = [
   { name: "NHL", slug: "nhl", active: false },
 ];
 
-interface Game {
-  game_id: string;
-  status: string;
-  home_team_id: number;
-  away_team_id: number;
-  home_abbr: string | null;
-  away_abbr: string | null;
-  home_city: string | null;
-  away_city: string | null;
-  home_pts: number | null;
-  away_pts: number | null;
-  home_record: string | null;
-  away_record: string | null;
-}
-
 export default async function Home() {
   const API = process.env.API_URL;
 
-  const [teamsRes, standingsRes, todayRes, ptsRes, rebRes, astRes, recentRes] =
+  const [teamsRes, standingsRes, ptsRes, rebRes, astRes, recentRes] =
     await Promise.allSettled([
       fetch(`${API}/api/teams`, { next: { revalidate: 3600 } }),
       fetch(`${API}/api/standings`, { next: { revalidate: 300 } }),
-      fetch(`${API}/api/games/today`, { next: { revalidate: 60 } }),
       fetch(`${API}/api/leaders?stat=PTS`, { next: { revalidate: 3600 } }),
       fetch(`${API}/api/leaders?stat=REB`, { next: { revalidate: 3600 } }),
       fetch(`${API}/api/leaders?stat=AST`, { next: { revalidate: 3600 } }),
@@ -53,11 +37,6 @@ export default async function Home() {
   const standings =
     standingsRes.status === "fulfilled" && standingsRes.value.ok
       ? await standingsRes.value.json()
-      : null;
-
-  const today =
-    todayRes.status === "fulfilled" && todayRes.value.ok
-      ? await todayRes.value.json()
       : null;
 
   const ptsData =
@@ -80,7 +59,6 @@ export default async function Home() {
       ? await recentRes.value.json()
       : null;
 
-  const games: Game[] = today?.games ?? [];
   const recentGames = recentData?.games ?? [];
 
   return (
@@ -110,68 +88,8 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Scoreboard */}
-      <section>
-        <h2 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">
-          Today&apos;s Games
-        </h2>
-        {games.length === 0 ? (
-          <p className="text-secondary text-sm">No games scheduled today.</p>
-        ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {games.map((game) => (
-              <div
-                key={game.game_id}
-                className="bg-card border border-edge rounded-md px-4 py-3"
-              >
-                {/* Away team */}
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="relative w-6 h-6 shrink-0">
-                      <Image
-                        src={`https://cdn.nba.com/logos/nba/${game.away_team_id}/primary/L/logo.svg`}
-                        alt={game.away_abbr ?? ""}
-                        fill
-                      />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-primary">{game.away_abbr}</p>
-                      <p className="text-[10px] text-muted">{game.away_record}</p>
-                    </div>
-                  </div>
-                  <span className="text-lg font-bold text-primary tabular-nums">
-                    {game.away_pts ?? "–"}
-                  </span>
-                </div>
-
-                {/* Home team */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="relative w-6 h-6 shrink-0">
-                      <Image
-                        src={`https://cdn.nba.com/logos/nba/${game.home_team_id}/primary/L/logo.svg`}
-                        alt={game.home_abbr ?? ""}
-                        fill
-                      />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-primary">{game.home_abbr}</p>
-                      <p className="text-[10px] text-muted">{game.home_record}</p>
-                    </div>
-                  </div>
-                  <span className="text-lg font-bold text-primary tabular-nums">
-                    {game.home_pts ?? "–"}
-                  </span>
-                </div>
-
-                <p className="text-[10px] text-accent mt-2 text-center font-medium">
-                  {game.status}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+      {/* Scoreboard — client component with date navigation */}
+      <DashboardScoreboard />
 
       {/* Recent Results */}
       {recentGames.length > 0 && <RecentGamesBar games={recentGames} />}
@@ -201,23 +119,22 @@ export default async function Home() {
           <h2 className="text-xs font-semibold text-muted uppercase tracking-wider">
             NBA Teams
           </h2>
-          <Link
-            href="/nba"
-            className="text-xs text-accent hover:underline"
-          >
+          <Link href="/nba" className="text-xs text-accent hover:underline">
             View all →
           </Link>
         </div>
         {teams.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {teams.map((team: { id: number; full_name: string; abbreviation: string }) => (
-              <TeamCard
-                key={team.id}
-                id={team.id}
-                full_name={team.full_name}
-                abbreviation={team.abbreviation}
-              />
-            ))}
+            {teams.map(
+              (team: { id: number; full_name: string; abbreviation: string }) => (
+                <TeamCard
+                  key={team.id}
+                  id={team.id}
+                  full_name={team.full_name}
+                  abbreviation={team.abbreviation}
+                />
+              )
+            )}
           </div>
         ) : (
           <p className="text-secondary text-sm">Teams unavailable.</p>
