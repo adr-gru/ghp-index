@@ -1,6 +1,6 @@
 # GHP-Index: Sports Statistics Web Application
 
-> **Last Updated:** April 13, 2026
+> **Last Updated:** April 21, 2026
 > **Project Owner:** Adrian G. (4th Year CS Student)
 > **Purpose:** Portfolio project + skill development
 > **Status:** 🟢 Deployed to Production
@@ -64,9 +64,13 @@ GHP-Index is a web application that aggregates and displays statistics from the 
 - Cache management endpoints (`/api/cache/stats`, `/api/cache/clear`)
 
 **NBA Features:**
-- Dashboard: scoreboard, league leaders, standings, team grid
-- Team pages: info, roster, game log, shot chart
+- Dashboard: scoreboard with day navigation (← / →), league leaders, standings, team grid
+- Team pages: tabbed layout — Overview (streaks, splits, season avgs, result badges), Roster, Game Log, Shot Chart
 - Player pages: bio, stats, projections, career stats, comparison tool
+- Player search: client-side search across all ~4500 players with headshots (NBA page + Players tab)
+- Recent performance chart: Recharts bar chart (last 15 games, PTS/REB/AST/STL/BLK selector, team-colored bars)
+- Career progression chart: per-game averages across all seasons with animated stat selector
+- Projections: confidence range bars (low/projection/high gauge) with season-avg marker
 - Shot chart with filters (player/team/context controls)
 - Player comparison with side-by-side stats and color-coded differentials
 - Career stats: season-by-season table, totals/averages, career highs
@@ -110,10 +114,13 @@ ghp-index/
 │   │   │   ├── TeamCard.tsx
 │   │   │   ├── PlayerCard.tsx
 │   │   │   ├── GameLog.tsx
-│   │   │   ├── PlayerTabs.tsx   # Last Games / Projections / Shots / Career / Compare
-│   │   │   ├── NBAPlayerProjection.tsx  # EWMA + trend projection
-│   │   │   ├── NBAPlayerComparison.tsx  # Side-by-side comparison
-│   │   │   ├── PlayerCareer.tsx          # Career stats with season table
+│   │   │   ├── PlayerTabs.tsx            # Last Games / Projections / Shots / Career / Compare
+│   │   │   ├── PlayerStatChart.tsx       # Recent game bar chart (Recharts, per-stat selector)
+│   │   │   ├── NBAPlayerProjection.tsx   # EWMA projection + confidence range bars
+│   │   │   ├── NBAPlayerComparison.tsx   # Side-by-side comparison
+│   │   │   ├── PlayerCareer.tsx          # Career stats + progression chart
+│   │   │   ├── PlayerSearch.tsx          # Client-side player search with headshots
+│   │   │   ├── DashboardScoreboard.tsx   # Scoreboard with day navigation
 │   │   │   ├── ShotChart.tsx             # SVG court + shot heatmap
 │   │   │   ├── ShotsFilter.tsx           # Shot chart controls
 │   │   │   ├── DashboardLeaders.tsx      # League leaders widget
@@ -146,6 +153,7 @@ ghp-index/
 
 **Games & Stats:**
 - `GET /api/games/today` - Today's scores/games
+- `GET /api/games/scoreboard?date=YYYY-MM-DD` - Scoreboard for any date (2-min TTL today, 24h past)
 - `GET /api/games/recent` - Recent games
 - `GET /api/leaders?stat={stat}` - League leaders (PPG/RPG/APG)
 - `GET /api/standings` - Conference standings
@@ -168,24 +176,22 @@ ghp-index/
 - Career stats and player comparison
 - Production deployment
 
-### 🎯 Phase 2: Enhanced Features (Next Up)
+### 🟡 Phase 2: Enhanced Features (In Progress — `feature/enhanced-dashboard`)
 
-**Priority 1: Data Quality**
-- [ ] Add loading indicators during data refresh
-- [ ] Implement stale-while-revalidate pattern
-- [ ] Add last-updated timestamps to cached data
+**Done:**
+- [x] Player search (client-side, all players)
+- [x] Scoreboard date navigation (any date in season)
+- [x] Recent game performance chart (bar chart, per-stat selector)
+- [x] Career progression chart (Recharts, season-by-season)
+- [x] Projection confidence range visualization
+- [x] Team page tabbed layout (Overview / Roster / Game Log / Shot Chart)
 
-**Priority 2: User Experience**
-- [ ] Search functionality (players + teams)
-- [ ] Bookmarks/favorites system
-- [ ] Recent views history
-- [ ] Shareable player/team links
-
-**Priority 3: Advanced Stats**
+**Remaining:**
 - [ ] Box score view for individual games
 - [ ] Head-to-head matchup history
 - [ ] Advanced stats (PER, TS%, Usage Rate)
-- [ ] Trend analysis (hot/cold streaks)
+- [ ] Bookmarks/favorites system
+- [ ] Last-updated timestamps on cached data
 
 ### Phase 3: Multi-League Expansion
 - [ ] Abstract NBA patterns into reusable components
@@ -236,7 +242,8 @@ ghp-index/
 | Apr 8, 2026 | 9 | Projections endpoint, shot charts |
 | Apr 13, 2026 | 10 | Dashboard with scoreboard/leaders/standings |
 | Apr 13, 2026 | 11 | Career stats, player comparison |
-| Apr 13, 2026 | 12 | **Production deployment & reliability:** Backend caching with TTL (30-60min), retry logic with exponential backoff, 20s timeouts, stale cache fallback; Frontend converted to CSR with skeleton loaders, error states with retry buttons; Fixed career stats bugs (highs showing totals vs averages, incomplete game data); Fixed player comparison contrast; Deployed to Vercel + Railway |
+| Apr 13, 2026 | 12 | **Production deployment & reliability:** Backend caching with TTL (30-60min), retry logic with exponential backoff, 20s timeouts, stale cache fallback; Frontend converted to CSR with skeleton loaders, error states with retry buttons; Fixed career stats bugs; Deployed to Vercel + Railway |
+| Apr 21, 2026 | 13 | **Enhanced dashboard (branch: `feature/enhanced-dashboard`):** Scoreboard day navigation; player search across all ~4500 players; recent game bar chart + career progression chart (Recharts); projection confidence range bars; team page tabbed layout with Overview stats |
 
 ---
 

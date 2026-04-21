@@ -9,6 +9,14 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "cdn.nba.com",
       },
+      {
+        protocol: "https",
+        hostname: "a.espncdn.com",
+      },
+      {
+        protocol: "https",
+        hostname: "www.mlbstatic.com",
+      },
     ],
     dangerouslyAllowSVG: true,
     contentDispositionType: 'attachment',
@@ -21,7 +29,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: "img-src 'self' https://cdn.nba.com data: blob:;",
+            value: "img-src 'self' https://cdn.nba.com https://a.espncdn.com https://www.mlbstatic.com data: blob:;",
           },
         ],
       },

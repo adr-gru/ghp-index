@@ -1,6 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
 
 interface SeasonStats {
   seasonId: string;
@@ -66,73 +76,86 @@ export default function PlayerCareer({ playerId, apiUrl }: PlayerCareerProps) {
   const [loading, setLoading] = useState(true);
   const [showPlayoffs, setShowPlayoffs] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [chartStat, setChartStat] = useState<"pts" | "reb" | "ast" | "stl" | "blk">("pts");
 
   useEffect(() => {
     fetch(`${apiUrl}/api/players/${playerId}/career/`)
       .then(res => res.json())
       .then(data => {
+        // resultSets layout from PlayerCareerStats:
+        // [0] SeasonTotalsRegularSeason — one row per season
+        // [1] CareerTotalsRegularSeason — one row, true all-time totals
+        // [2] SeasonTotalsPostSeason    — one row per playoff season
+        // [3] CareerTotalsPostSeason    — one row, career playoff totals
         const regularSeasonData = data.info.resultSets[0];
-        const playoffData = data.info.resultSets[1];
+        const careerTotalsData  = data.info.resultSets[1];
+        const playoffData       = data.info.resultSets[2];
 
-        const parseSeasonStats = (rowSet: any[]): SeasonStats[] => {
-          // Filter out the career totals row (last row) from season stats
-          return rowSet.slice(0, -1).map((row: any[]) => ({
-            seasonId: row[1],
-            teamAbbreviation: row[4],
-            playerAge: row[5],
-            gp: row[6],
-            gs: row[7],
-            min: parseFloat(row[8]) || 0,
-            fgm: parseFloat(row[9]) || 0,
-            fga: parseFloat(row[10]) || 0,
-            fgPct: parseFloat(row[11]) || 0,
-            fg3m: parseFloat(row[12]) || 0,
-            fg3a: parseFloat(row[13]) || 0,
-            fg3Pct: parseFloat(row[14]) || 0,
-            ftm: parseFloat(row[15]) || 0,
-            fta: parseFloat(row[16]) || 0,
-            ftPct: parseFloat(row[17]) || 0,
-            oreb: parseFloat(row[18]) || 0,
-            dreb: parseFloat(row[19]) || 0,
-            reb: parseFloat(row[20]) || 0,
-            ast: parseFloat(row[21]) || 0,
-            stl: parseFloat(row[22]) || 0,
-            blk: parseFloat(row[23]) || 0,
-            tov: parseFloat(row[24]) || 0,
-            pf: parseFloat(row[25]) || 0,
-            pts: parseFloat(row[26]) || 0,
+        // Use header names so column-order differences between result sets
+        // (e.g. CareerTotals has no SEASON_ID) never cause index mismatches.
+        const makeIdx = (headers: string[]) => (name: string) => headers.indexOf(name);
+
+        const parseSeasonStats = (resultSet: { headers: string[]; rowSet: any[][] }): SeasonStats[] => {
+          const i = makeIdx(resultSet.headers);
+          return resultSet.rowSet.map((row) => ({
+            seasonId:         row[i("SEASON_ID")] ?? "",
+            teamAbbreviation: row[i("TEAM_ABBREVIATION")] ?? "",
+            playerAge:        row[i("PLAYER_AGE")] ?? 0,
+            gp:               row[i("GP")] ?? 0,
+            gs:               row[i("GS")] ?? 0,
+            min:  parseFloat(row[i("MIN")])    || 0,
+            fgm:  parseFloat(row[i("FGM")])    || 0,
+            fga:  parseFloat(row[i("FGA")])    || 0,
+            fgPct:  parseFloat(row[i("FG_PCT")])  || 0,
+            fg3m: parseFloat(row[i("FG3M")])   || 0,
+            fg3a: parseFloat(row[i("FG3A")])   || 0,
+            fg3Pct: parseFloat(row[i("FG3_PCT")]) || 0,
+            ftm:  parseFloat(row[i("FTM")])    || 0,
+            fta:  parseFloat(row[i("FTA")])    || 0,
+            ftPct:  parseFloat(row[i("FT_PCT")])  || 0,
+            oreb: parseFloat(row[i("OREB")])   || 0,
+            dreb: parseFloat(row[i("DREB")])   || 0,
+            reb:  parseFloat(row[i("REB")])    || 0,
+            ast:  parseFloat(row[i("AST")])    || 0,
+            stl:  parseFloat(row[i("STL")])    || 0,
+            blk:  parseFloat(row[i("BLK")])    || 0,
+            tov:  parseFloat(row[i("TOV")])    || 0,
+            pf:   parseFloat(row[i("PF")])     || 0,
+            pts:  parseFloat(row[i("PTS")])    || 0,
           }));
         };
 
-        // Use the last row of regular season data for career totals
-        const totalsRow = regularSeasonData.rowSet[regularSeasonData.rowSet.length - 1];
-        const totals: CareerTotals = {
-          gp: totalsRow[6],
-          gs: totalsRow[7],
-          min: parseFloat(totalsRow[8]) || 0,
-          fgm: parseFloat(totalsRow[9]) || 0,
-          fga: parseFloat(totalsRow[10]) || 0,
-          fgPct: parseFloat(totalsRow[11]) || 0,
-          fg3m: parseFloat(totalsRow[12]) || 0,
-          fg3a: parseFloat(totalsRow[13]) || 0,
-          fg3Pct: parseFloat(totalsRow[14]) || 0,
-          ftm: parseFloat(totalsRow[15]) || 0,
-          fta: parseFloat(totalsRow[16]) || 0,
-          ftPct: parseFloat(totalsRow[17]) || 0,
-          oreb: parseFloat(totalsRow[18]) || 0,
-          dreb: parseFloat(totalsRow[19]) || 0,
-          reb: parseFloat(totalsRow[20]) || 0,
-          ast: parseFloat(totalsRow[21]) || 0,
-          stl: parseFloat(totalsRow[22]) || 0,
-          blk: parseFloat(totalsRow[23]) || 0,
-          tov: parseFloat(totalsRow[24]) || 0,
-          pts: parseFloat(totalsRow[26]) || 0,
+        const parseTotals = (resultSet: { headers: string[]; rowSet: any[][] }): CareerTotals => {
+          const i = makeIdx(resultSet.headers);
+          const row = resultSet.rowSet[0];
+          return {
+            gp:  row[i("GP")] ?? 0,
+            gs:  row[i("GS")] ?? 0,
+            min:    parseFloat(row[i("MIN")])    || 0,
+            fgm:    parseFloat(row[i("FGM")])    || 0,
+            fga:    parseFloat(row[i("FGA")])    || 0,
+            fgPct:  parseFloat(row[i("FG_PCT")])  || 0,
+            fg3m:   parseFloat(row[i("FG3M")])   || 0,
+            fg3a:   parseFloat(row[i("FG3A")])   || 0,
+            fg3Pct: parseFloat(row[i("FG3_PCT")]) || 0,
+            ftm:    parseFloat(row[i("FTM")])    || 0,
+            fta:    parseFloat(row[i("FTA")])    || 0,
+            ftPct:  parseFloat(row[i("FT_PCT")])  || 0,
+            oreb:   parseFloat(row[i("OREB")])   || 0,
+            dreb:   parseFloat(row[i("DREB")])   || 0,
+            reb:    parseFloat(row[i("REB")])    || 0,
+            ast:    parseFloat(row[i("AST")])    || 0,
+            stl:    parseFloat(row[i("STL")])    || 0,
+            blk:    parseFloat(row[i("BLK")])    || 0,
+            tov:    parseFloat(row[i("TOV")])    || 0,
+            pts:    parseFloat(row[i("PTS")])    || 0,
+          };
         };
 
         setCareerData({
-          seasonStats: parseSeasonStats(regularSeasonData.rowSet),
-          playoffStats: parseSeasonStats(playoffData.rowSet),
-          careerTotals: totals,
+          seasonStats:   parseSeasonStats(regularSeasonData),
+          playoffStats:  parseSeasonStats(playoffData ?? { headers: [], rowSet: [] }),
+          careerTotals:  parseTotals(careerTotalsData),
         });
         setLoading(false);
       })
@@ -184,6 +207,28 @@ export default function PlayerCareer({ playerId, apiUrl }: PlayerCareerProps) {
     fg3Pct: (careerData.careerTotals.fg3Pct * 100).toFixed(1),
     ftPct: (careerData.careerTotals.ftPct * 100).toFixed(1),
   };
+
+  const CAREER_STATS = [
+    { key: "pts", label: "PTS", color: "#3b82f6" },
+    { key: "reb", label: "REB", color: "#10b981" },
+    { key: "ast", label: "AST", color: "#f59e0b" },
+    { key: "stl", label: "STL", color: "#a855f7" },
+    { key: "blk", label: "BLK", color: "#ef4444" },
+  ] as const;
+
+  const chartData = careerData.seasonStats.map((s) => ({
+    season: s.seasonId.slice(-5),
+    team: s.teamAbbreviation,
+    value:
+      s.gp > 0
+        ? parseFloat(
+            (s[chartStat as keyof SeasonStats] as number / s.gp).toFixed(1)
+          )
+        : 0,
+  }));
+
+  const activeStat = CAREER_STATS.find((s) => s.key === chartStat)!;
+  const maxVal = Math.max(...chartData.map((d) => d.value), 0);
 
   return (
     <div className="space-y-6">
@@ -289,6 +334,68 @@ export default function PlayerCareer({ playerId, apiUrl }: PlayerCareerProps) {
         </div>
       </div>
 
+      {/* Career Stat Progression Chart */}
+      <div className="bg-card border border-edge rounded-md p-4 sm:p-6">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <h3 className="text-lg font-bold text-primary">Career Progression</h3>
+          <div className="flex gap-1 flex-wrap">
+            {CAREER_STATS.map((s) => (
+              <button
+                key={s.key}
+                onClick={() => setChartStat(s.key)}
+                style={chartStat === s.key ? { backgroundColor: s.color } : {}}
+                className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+                  chartStat === s.key
+                    ? "text-white"
+                    : "text-muted hover:text-primary bg-zinc-800"
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#2a2a3a" vertical={false} />
+            <XAxis
+              dataKey="season"
+              tick={{ fontSize: 9, fill: "#666" }}
+              axisLine={false}
+              tickLine={false}
+              interval="preserveStartEnd"
+            />
+            <YAxis
+              tick={{ fontSize: 9, fill: "#666" }}
+              axisLine={false}
+              tickLine={false}
+              domain={[0, Math.ceil(maxVal * 1.15) || 10]}
+            />
+            <Tooltip
+              contentStyle={{
+                background: "#1a1a2e",
+                border: "1px solid #333",
+                borderRadius: 6,
+                fontSize: 12,
+              }}
+              formatter={(v) => [typeof v === "number" ? v.toFixed(1) : String(v ?? ""), `${activeStat.label}/G`]}
+              labelFormatter={(label, payload) =>
+                `${label} · ${payload?.[0]?.payload?.team ?? ""}`
+              }
+              cursor={{ fill: "rgba(255,255,255,0.04)" }}
+            />
+            <Bar dataKey="value" radius={[3, 3, 0, 0]} maxBarSize={30}>
+              {chartData.map((_, i) => (
+                <Cell key={i} fill={activeStat.color} opacity={0.85} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+        <p className="text-[10px] text-muted mt-2">
+          Per-game averages by season · {chartData.length} seasons
+        </p>
+      </div>
+
       {/* Season-by-Season Stats */}
       <div className="bg-card rounded-md border border-edge overflow-hidden">
         <div className="px-6 py-4 bg-zinc-800 border-b border-edge flex justify-between items-center">
@@ -330,13 +437,13 @@ export default function PlayerCareer({ playerId, apiUrl }: PlayerCareerProps) {
                   <td className="px-4 py-2.5 text-secondary">{season.playerAge}</td>
                   <td className="px-4 py-2.5 text-secondary">{season.gp}</td>
                   <td className="px-4 py-2.5 text-secondary">{season.gs}</td>
-                  <td className="px-4 py-2.5 text-secondary">{season.min.toFixed(1)}</td>
-                  <td className="px-4 py-2.5 font-semibold text-primary">{season.pts.toFixed(1)}</td>
-                  <td className="px-4 py-2.5 text-secondary">{season.reb.toFixed(1)}</td>
-                  <td className="px-4 py-2.5 text-secondary">{season.ast.toFixed(1)}</td>
-                  <td className="px-4 py-2.5 text-secondary">{season.stl.toFixed(1)}</td>
-                  <td className="px-4 py-2.5 text-secondary">{season.blk.toFixed(1)}</td>
-                  <td className="px-4 py-2.5 text-secondary">{season.tov.toFixed(1)}</td>
+                  <td className="px-4 py-2.5 text-secondary">{season.gp > 0 ? (season.min / season.gp).toFixed(1) : "—"}</td>
+                  <td className="px-4 py-2.5 font-semibold text-primary">{season.gp > 0 ? (season.pts / season.gp).toFixed(1) : "—"}</td>
+                  <td className="px-4 py-2.5 text-secondary">{season.gp > 0 ? (season.reb / season.gp).toFixed(1) : "—"}</td>
+                  <td className="px-4 py-2.5 text-secondary">{season.gp > 0 ? (season.ast / season.gp).toFixed(1) : "—"}</td>
+                  <td className="px-4 py-2.5 text-secondary">{season.gp > 0 ? (season.stl / season.gp).toFixed(1) : "—"}</td>
+                  <td className="px-4 py-2.5 text-secondary">{season.gp > 0 ? (season.blk / season.gp).toFixed(1) : "—"}</td>
+                  <td className="px-4 py-2.5 text-secondary">{season.gp > 0 ? (season.tov / season.gp).toFixed(1) : "—"}</td>
                   <td className="px-4 py-2.5 text-secondary">{(season.fgPct * 100).toFixed(1)}%</td>
                   <td className="px-4 py-2.5 text-secondary">{(season.fg3Pct * 100).toFixed(1)}%</td>
                   <td className="px-4 py-2.5 text-secondary">{(season.ftPct * 100).toFixed(1)}%</td>

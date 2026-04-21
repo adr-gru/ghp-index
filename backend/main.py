@@ -11,6 +11,7 @@ import time
 import os
 import threading
 import diskcache as dc
+import requests
 
 app = FastAPI()
 
@@ -317,14 +318,18 @@ def project_stat(col: str, recent: pd.DataFrame, df: pd.DataFrame) -> dict:
 
 @app.get("/api/players/{player_id}/career/")
 def get_player_career(player_id: int):
-    cache_key = f"player_career_{player_id}"
+    cache_key = f"player_career_totals_{player_id}"
     cached = cache_get(cache_key, ttl_minutes=60)
     if cached:
         return cached
 
     try:
         def fetch_career():
-            return playercareerstats.PlayerCareerStats(player_id=player_id, timeout=9)
+            # Totals mode: resultSets[1] contains true career counting totals
+            # (PerGame default would give per-game averages there instead)
+            return playercareerstats.PlayerCareerStats(
+                player_id=player_id, per_mode36="Totals", timeout=9
+            )
 
         career_stats = retry_api_call(fetch_career)
         result = {"info": career_stats.get_dict()}
@@ -400,6 +405,57 @@ def get_shots(
 # ---------------------------------------------------------------------------
 # Games / scores
 # ---------------------------------------------------------------------------
+def _parse_scoreboard(board) -> list:
+    """Shared helper: parse a ScoreboardV2 response into a list of game dicts."""
+    data = board.get_dict()
+    g_rs = data["resultSets"][0]
+    l_rs = data["resultSets"][1]
+    g_headers = g_rs["headers"]
+    l_headers = l_rs["headers"]
+
+    def g_idx(name): return g_headers.index(name)
+    def l_idx(name): return l_headers.index(name)
+
+    games: dict = {}
+    for row in g_rs["rowSet"]:
+        game_id = row[g_idx("GAME_ID")]
+        games[game_id] = {
+            "game_id": game_id,
+            "status": row[g_idx("GAME_STATUS_TEXT")],
+            "home_team_id": row[g_idx("HOME_TEAM_ID")],
+            "away_team_id": row[g_idx("VISITOR_TEAM_ID")],
+            "home_abbr": None, "away_abbr": None,
+            "home_city": None, "away_city": None,
+            "home_pts": None, "away_pts": None,
+            "home_record": None, "away_record": None,
+        }
+
+    for row in l_rs["rowSet"]:
+        game_id = row[l_idx("GAME_ID")]
+        team_id = row[l_idx("TEAM_ID")]
+        if game_id not in games:
+            continue
+        g = games[game_id]
+        entry = {
+            "abbr": row[l_idx("TEAM_ABBREVIATION")],
+            "city": row[l_idx("TEAM_CITY_NAME")],
+            "pts": row[l_idx("PTS")],
+            "record": row[l_idx("TEAM_WINS_LOSSES")],
+        }
+        if team_id == g["home_team_id"]:
+            g["home_abbr"] = entry["abbr"]
+            g["home_city"] = entry["city"]
+            g["home_pts"] = entry["pts"]
+            g["home_record"] = entry["record"]
+        else:
+            g["away_abbr"] = entry["abbr"]
+            g["away_city"] = entry["city"]
+            g["away_pts"] = entry["pts"]
+            g["away_record"] = entry["record"]
+
+    return list(games.values())
+
+
 @app.get("/api/games/today")
 def get_games_today():
     cache_key = "games_today"
@@ -409,57 +465,45 @@ def get_games_today():
 
     try:
         def fetch():
-            return scoreboardv2.ScoreboardV2()
+            return scoreboardv2.ScoreboardV2(timeout=9)
 
         board = retry_api_call(fetch)
-        data = board.get_dict()
+        result = {"games": _parse_scoreboard(board)}
+        cache_set(cache_key, result)
+        return result
 
-        g_rs = data["resultSets"][0]
-        l_rs = data["resultSets"][1]
-        g_headers = g_rs["headers"]
-        l_headers = l_rs["headers"]
+    except Exception as e:
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
+        raise HTTPException(status_code=503, detail=f"NBA API timeout or error: {str(e)}")
 
-        def g_idx(name): return g_headers.index(name)
-        def l_idx(name): return l_headers.index(name)
 
-        games = {}
-        for row in g_rs["rowSet"]:
-            game_id = row[g_idx("GAME_ID")]
-            games[game_id] = {
-                "game_id": game_id,
-                "status": row[g_idx("GAME_STATUS_TEXT")],
-                "home_team_id": row[g_idx("HOME_TEAM_ID")],
-                "away_team_id": row[g_idx("VISITOR_TEAM_ID")],
-                "home_abbr": None, "away_abbr": None,
-                "home_city": None, "away_city": None,
-                "home_pts": None, "away_pts": None,
-                "home_record": None, "away_record": None,
-            }
+@app.get("/api/games/scoreboard")
+def get_scoreboard(date: Optional[str] = None):
+    """Get scoreboard for any date. date param: YYYY-MM-DD (defaults to today)."""
+    if date:
+        try:
+            game_date = datetime.strptime(date, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    else:
+        game_date = datetime.now()
 
-        for row in l_rs["rowSet"]:
-            game_id = row[l_idx("GAME_ID")]
-            team_id = row[l_idx("TEAM_ID")]
-            if game_id not in games:
-                continue
-            g = games[game_id]
-            entry = {
-                "abbr": row[l_idx("TEAM_ABBREVIATION")],
-                "city": row[l_idx("TEAM_CITY_NAME")],
-                "pts": row[l_idx("PTS")],
-                "record": row[l_idx("TEAM_WINS_LOSSES")],
-            }
-            if team_id == g["home_team_id"]:
-                g["home_abbr"] = entry["abbr"]
-                g["home_city"] = entry["city"]
-                g["home_pts"] = entry["pts"]
-                g["home_record"] = entry["record"]
-            else:
-                g["away_abbr"] = entry["abbr"]
-                g["away_city"] = entry["city"]
-                g["away_pts"] = entry["pts"]
-                g["away_record"] = entry["record"]
+    date_str = game_date.strftime("%Y-%m-%d")
+    is_today = date_str == datetime.now().strftime("%Y-%m-%d")
+    ttl = 2 if is_today else 1440  # 2 min for today, 24 h for past dates
+    cache_key = f"games_scoreboard_{date_str}"
+    cached = cache_get(cache_key, ttl_minutes=ttl)
+    if cached:
+        return cached
 
-        result = {"games": list(games.values())}
+    try:
+        def fetch():
+            return scoreboardv2.ScoreboardV2(game_date=game_date.strftime("%m/%d/%Y"), timeout=9)
+
+        board = retry_api_call(fetch)
+        result = {"games": _parse_scoreboard(board), "date": date_str}
         cache_set(cache_key, result)
         return result
 
@@ -658,3 +702,643 @@ def get_cache_stats():
 def clear_cache():
     _cache.clear()
     return {"message": "Cache cleared successfully"}
+
+
+# ---------------------------------------------------------------------------
+# NFL endpoints — powered by ESPN public API
+# ---------------------------------------------------------------------------
+_NFL_ESPN_BASE = "https://site.api.espn.com/apis/site/v2/sports/football/nfl"
+_NFL_HEADERS = {"User-Agent": "ghp-index/1.0"}
+
+# Static conference / division mapping — won't change unless expansion
+_NFL_CONF_DIV: dict[str, tuple[str, str]] = {}
+for _conf, _divs in {
+    "AFC": {
+        "East":  ["BUF", "MIA", "NE",  "NYJ"],
+        "North": ["BAL", "CIN", "CLE", "PIT"],
+        "South": ["HOU", "IND", "JAX", "TEN"],
+        "West":  ["DEN", "KC",  "LV",  "LAC"],
+    },
+    "NFC": {
+        "East":  ["DAL", "NYG", "PHI", "WAS"],
+        "North": ["CHI", "DET", "GB",  "MIN"],
+        "South": ["ATL", "CAR", "NO",  "TB"],
+        "West":  ["ARI", "LAR", "SF",  "SEA"],
+    },
+}.items():
+    for _div, _abbrs in _divs.items():
+        for _abbr in _abbrs:
+            _NFL_CONF_DIV[_abbr] = (_conf, _div)
+
+
+def _espn_get(url: str, timeout: int = 10) -> dict:
+    resp = requests.get(url, timeout=timeout, headers=_NFL_HEADERS)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def _parse_nfl_record(record_obj: dict) -> tuple[str, int, int]:
+    """Extract (summary, wins, losses) from an ESPN record object."""
+    items = record_obj.get("items", [{}]) if record_obj else [{}]
+    first = items[0] if items else {}
+    summary = first.get("summary", "0-0")
+    stats = first.get("stats", [])
+    wins   = int(next((s["value"] for s in stats if s["name"] == "wins"),   0))
+    losses = int(next((s["value"] for s in stats if s["name"] == "losses"), 0))
+    return summary, wins, losses
+
+
+def _team_logo(t: dict) -> str:
+    logos = t.get("logos", [])
+    return logos[0]["href"] if logos else ""
+
+
+@app.get("/api/nfl/teams")
+def get_nfl_teams():
+    cache_key = "nfl_teams"
+    cached = cache_get(cache_key, ttl_minutes=60)
+    if cached:
+        return cached
+
+    try:
+        data = retry_api_call(
+            lambda: _espn_get(f"{_NFL_ESPN_BASE}/teams?limit=32")
+        )
+        raw = data["sports"][0]["leagues"][0]["teams"]
+
+        out = []
+        for item in raw:
+            t = item["team"]
+            abbr = t["abbreviation"]
+            conf, div = _NFL_CONF_DIV.get(abbr, ("", ""))
+            summary, wins, losses = _parse_nfl_record(item.get("record", {}))
+            out.append({
+                "id":              t["id"],
+                "abbreviation":    abbr,
+                "display_name":    t["displayName"],
+                "nickname":        t.get("nickname") or t.get("name", ""),
+                "location":        t.get("location", ""),
+                "color":           f"#{t.get('color', '1a1a1a')}",
+                "alternate_color": f"#{t.get('alternateColor', 'ffffff')}",
+                "logo":            _team_logo(t),
+                "conference":      conf,
+                "division":        div,
+                "record":          summary,
+                "wins":            wins,
+                "losses":          losses,
+            })
+
+        out.sort(key=lambda x: (x["conference"], x["division"], x["display_name"]))
+        cache_set(cache_key, out)
+        return out
+
+    except Exception as e:
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
+        raise HTTPException(status_code=503, detail=f"ESPN API error: {str(e)}")
+
+
+@app.get("/api/nfl/teams/{team_id}")
+def get_nfl_team(team_id: str):
+    cache_key = f"nfl_team_{team_id}"
+    cached = cache_get(cache_key, ttl_minutes=30)
+    if cached:
+        return cached
+
+    try:
+        data = retry_api_call(
+            lambda: _espn_get(f"{_NFL_ESPN_BASE}/teams/{team_id}")
+        )
+        t = data["team"]
+        abbr = t["abbreviation"]
+        conf, div = _NFL_CONF_DIV.get(abbr, ("", ""))
+        summary, wins, losses = _parse_nfl_record(t.get("record", {}))
+
+        # Schedule
+        sched_data = retry_api_call(
+            lambda: _espn_get(f"{_NFL_ESPN_BASE}/teams/{team_id}/schedule")
+        )
+        games = []
+        for event in sched_data.get("events", []):
+            comps = event.get("competitions", [{}])
+            comp  = comps[0] if comps else {}
+            competitors = comp.get("competitors", [])
+            status_type = comp.get("status", {}).get("type", {})
+            completed   = bool(status_type.get("completed", False))
+
+            home_comp = next((c for c in competitors if c.get("homeAway") == "home"), {})
+            away_comp = next((c for c in competitors if c.get("homeAway") == "away"), {})
+            home_team = home_comp.get("team", {})
+            away_team = away_comp.get("team", {})
+
+            is_home    = home_team.get("abbreviation") == abbr
+            this_comp  = home_comp if is_home else away_comp
+            opp_comp   = away_comp if is_home else home_comp
+            opp_team   = away_team if is_home else home_team
+
+            opp_logos  = opp_team.get("logos", [])
+            opp_logo   = opp_logos[0]["href"] if opp_logos else ""
+
+            result = ""
+            if completed:
+                if this_comp.get("winner"):
+                    result = "W"
+                elif opp_comp.get("winner"):
+                    result = "L"
+                else:
+                    result = "T"
+
+            def _score(comp_obj: dict) -> Optional[int]:
+                raw = comp_obj.get("score")
+                try:
+                    return int(raw) if raw is not None else None
+                except (ValueError, TypeError):
+                    return None
+
+            games.append({
+                "id":            event.get("id"),
+                "date":          event.get("date"),
+                "week":          event.get("week", {}).get("number"),
+                "opponent_abbr": opp_team.get("abbreviation", ""),
+                "opponent_id":   opp_team.get("id", ""),
+                "opponent_name": opp_team.get("displayName", ""),
+                "opponent_logo": opp_logo,
+                "is_home":       is_home,
+                "this_score":    _score(this_comp) if completed else None,
+                "opp_score":     _score(opp_comp)  if completed else None,
+                "result":        result,
+                "completed":     completed,
+                "status_text":   status_type.get("description", ""),
+            })
+
+        result_obj = {
+            "id":              t["id"],
+            "abbreviation":    abbr,
+            "display_name":    t["displayName"],
+            "nickname":        t.get("nickname") or t.get("name", ""),
+            "location":        t.get("location", ""),
+            "color":           f"#{t.get('color', '1a1a1a')}",
+            "alternate_color": f"#{t.get('alternateColor', 'ffffff')}",
+            "logo":            _team_logo(t),
+            "conference":      conf,
+            "division":        div,
+            "record":          summary,
+            "wins":            wins,
+            "losses":          losses,
+            "schedule":        games,
+        }
+        cache_set(cache_key, result_obj)
+        return result_obj
+
+    except Exception as e:
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
+        raise HTTPException(status_code=503, detail=f"ESPN API error: {str(e)}")
+
+
+@app.get("/api/nfl/scoreboard")
+def get_nfl_scoreboard():
+    cache_key = "nfl_scoreboard"
+    cached = cache_get(cache_key, ttl_minutes=5)
+    if cached:
+        return cached
+
+    try:
+        data = retry_api_call(
+            lambda: _espn_get(f"{_NFL_ESPN_BASE}/scoreboard")
+        )
+        games_out = []
+        for event in data.get("events", []):
+            comp        = (event.get("competitions") or [{}])[0]
+            competitors = comp.get("competitors", [])
+            status_type = comp.get("status", {}).get("type", {})
+            status_disp = comp.get("status", {}).get("displayClock", "")
+
+            home_comp = next((c for c in competitors if c.get("homeAway") == "home"), {})
+            away_comp = next((c for c in competitors if c.get("homeAway") == "away"), {})
+            home_team = home_comp.get("team", {})
+            away_team = away_comp.get("team", {})
+
+            def _rec(comp_obj):
+                recs = comp_obj.get("records", [])
+                return recs[0].get("summary", "") if recs else ""
+
+            games_out.append({
+                "id":          event.get("id"),
+                "date":        event.get("date"),
+                "name":        event.get("name"),
+                "status":      status_type.get("description", ""),
+                "completed":   bool(status_type.get("completed", False)),
+                "clock":       status_disp,
+                "period":      comp.get("status", {}).get("period", 0),
+                "home_id":     home_team.get("id"),
+                "home_abbr":   home_team.get("abbreviation"),
+                "home_logo":   _team_logo(home_team),
+                "home_score":  home_comp.get("score"),
+                "home_record": _rec(home_comp),
+                "away_id":     away_team.get("id"),
+                "away_abbr":   away_team.get("abbreviation"),
+                "away_logo":   _team_logo(away_team),
+                "away_score":  away_comp.get("score"),
+                "away_record": _rec(away_comp),
+            })
+
+        result = {
+            "games":  games_out,
+            "season": data.get("season", {}).get("year"),
+            "week":   data.get("week", {}).get("number"),
+        }
+        cache_set(cache_key, result)
+        return result
+
+    except Exception as e:
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
+        raise HTTPException(status_code=503, detail=f"ESPN API error: {str(e)}")
+
+
+# ===========================================================================
+# MLB endpoints — MLB Stats API (public, no auth required)
+# ===========================================================================
+_MLB_API = "https://statsapi.mlb.com/api/v1"
+_MLB_SEASON = 2025
+
+
+def _mlb_get(path: str, params: dict | None = None, timeout: int = 9) -> dict:
+    resp = requests.get(f"{_MLB_API}{path}", params=params or {}, timeout=timeout)
+    resp.raise_for_status()
+    return resp.json()
+
+
+@app.get("/api/mlb/teams")
+def get_mlb_teams():
+    cache_key = "mlb_teams"
+    cached = cache_get(cache_key, ttl_minutes=1440)
+    if cached:
+        return cached
+
+    try:
+        data = retry_api_call(lambda: _mlb_get("/teams", {"sportId": 1}))
+
+        division_order = [
+            "American League East", "American League Central", "American League West",
+            "National League East", "National League Central", "National League West",
+        ]
+
+        teams_list = [
+            {
+                "id": t["id"],
+                "name": t.get("name", ""),
+                "teamName": t.get("teamName", ""),
+                "locationName": t.get("locationName", ""),
+                "abbreviation": t.get("abbreviation", ""),
+                "division": t.get("division", {}).get("name", ""),
+                "league": t.get("league", {}).get("name", ""),
+            }
+            for t in data.get("teams", [])
+            if t.get("active") and t.get("sport", {}).get("id") == 1
+        ]
+
+        teams_list.sort(key=lambda x: (
+            division_order.index(x["division"]) if x["division"] in division_order else 99,
+            x["name"],
+        ))
+
+        result = {"teams": teams_list}
+        cache_set(cache_key, result)
+        return result
+
+    except Exception as e:
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
+        raise HTTPException(status_code=503, detail=f"MLB API error: {str(e)}")
+
+
+@app.get("/api/mlb/teams/{team_id}")
+def get_mlb_team(team_id: int):
+    cache_key = f"mlb_team_{team_id}"
+    cached = cache_get(cache_key, ttl_minutes=30)
+    if cached:
+        return cached
+
+    try:
+        team_data = retry_api_call(lambda: _mlb_get(
+            f"/teams/{team_id}",
+            {"hydrate": "roster(type=active,hydrate=person(currentAge,primaryPosition))"},
+        ))
+        team_info = team_data.get("teams", [{}])[0]
+        roster_raw = team_info.get("roster", [])
+
+        roster = [
+            {
+                "player_id": p.get("person", {}).get("id"),
+                "name": p.get("person", {}).get("fullName", ""),
+                "number": p.get("jerseyNumber", ""),
+                "position": p.get("position", {}).get("abbreviation", ""),
+                "position_type": p.get("position", {}).get("type", ""),
+                "age": p.get("person", {}).get("currentAge"),
+            }
+            for p in roster_raw
+        ]
+
+        hitting_stats: dict = {}
+        pitching_stats: dict = {}
+        try:
+            stats_data = _mlb_get(
+                f"/teams/{team_id}/stats",
+                {"stats": "season", "group": "hitting,pitching", "season": _MLB_SEASON, "sportId": 1},
+            )
+            for sg in stats_data.get("stats", []):
+                group = sg.get("group", {}).get("displayName", "")
+                splits = sg.get("splits", [])
+                if not splits:
+                    continue
+                s = splits[0].get("stat", {})
+                if group == "hitting":
+                    hitting_stats = {
+                        "avg": s.get("avg", ".000"),
+                        "runs": s.get("runs", 0),
+                        "homeRuns": s.get("homeRuns", 0),
+                        "rbi": s.get("rbi", 0),
+                        "obp": s.get("obp", ".000"),
+                        "slg": s.get("slg", ".000"),
+                        "ops": s.get("ops", ".000"),
+                    }
+                elif group == "pitching":
+                    pitching_stats = {
+                        "era": s.get("era", "0.00"),
+                        "whip": s.get("whip", "0.00"),
+                        "strikeOuts": s.get("strikeOuts", 0),
+                        "wins": s.get("wins", 0),
+                        "losses": s.get("losses", 0),
+                        "saves": s.get("saves", 0),
+                    }
+        except Exception:
+            pass
+
+        wins, losses = None, None
+        try:
+            rec_data = _mlb_get(
+                "/standings",
+                {"leagueId": "103,104", "season": _MLB_SEASON, "standingsTypes": "regularSeason", "hydrate": "team"},
+            )
+            for record in rec_data.get("records", []):
+                for tr in record.get("teamRecords", []):
+                    if tr.get("team", {}).get("id") == team_id:
+                        wins = tr.get("wins")
+                        losses = tr.get("losses")
+        except Exception:
+            pass
+
+        result = {
+            "id": team_info.get("id"),
+            "name": team_info.get("name"),
+            "teamName": team_info.get("teamName"),
+            "locationName": team_info.get("locationName"),
+            "abbreviation": team_info.get("abbreviation"),
+            "division": team_info.get("division", {}).get("name", ""),
+            "league": team_info.get("league", {}).get("name", ""),
+            "venue": team_info.get("venue", {}).get("name", ""),
+            "firstYearOfPlay": team_info.get("firstYearOfPlay"),
+            "wins": wins,
+            "losses": losses,
+            "roster": roster,
+            "hitting_stats": hitting_stats,
+            "pitching_stats": pitching_stats,
+        }
+        cache_set(cache_key, result)
+        return result
+
+    except Exception as e:
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
+        raise HTTPException(status_code=503, detail=f"MLB API error: {str(e)}")
+
+
+@app.get("/api/mlb/standings")
+def get_mlb_standings():
+    cache_key = "mlb_standings"
+    cached = cache_get(cache_key, ttl_minutes=60)
+    if cached:
+        return cached
+
+    try:
+        data = retry_api_call(lambda: _mlb_get(
+            "/standings",
+            {"leagueId": "103,104", "season": _MLB_SEASON, "standingsTypes": "regularSeason", "hydrate": "division,team"},
+        ))
+
+        division_order = [
+            "American League East", "American League Central", "American League West",
+            "National League East", "National League Central", "National League West",
+        ]
+
+        divisions = []
+        for record in data.get("records", []):
+            div_name = record.get("division", {}).get("name", "")
+            league = record.get("league", {}).get("name", "")
+
+            teams_in_div = []
+            for tr in record.get("teamRecords", []):
+                team = tr.get("team", {})
+                split_records = tr.get("records", {}).get("splitRecords", [])
+                last10 = next((s for s in split_records if s.get("type") == "lastTen"), {})
+                home_rec = next((s for s in split_records if s.get("type") == "home"), {})
+                away_rec = next((s for s in split_records if s.get("type") == "away"), {})
+                teams_in_div.append({
+                    "team_id": team.get("id"),
+                    "name": team.get("name", ""),
+                    "abbreviation": team.get("abbreviation", ""),
+                    "wins": tr.get("wins", 0),
+                    "losses": tr.get("losses", 0),
+                    "pct": tr.get("winningPercentage", ".000"),
+                    "gb": tr.get("gamesBack", "-"),
+                    "streak": tr.get("streak", {}).get("streakCode", ""),
+                    "last10": f"{last10.get('wins', 0)}-{last10.get('losses', 0)}" if last10 else "",
+                    "home": f"{home_rec.get('wins', 0)}-{home_rec.get('losses', 0)}" if home_rec else "",
+                    "away": f"{away_rec.get('wins', 0)}-{away_rec.get('losses', 0)}" if away_rec else "",
+                })
+
+            divisions.append({
+                "division": div_name,
+                "league": league,
+                "teams": teams_in_div,
+            })
+
+        divisions.sort(key=lambda d: (
+            division_order.index(d["division"]) if d["division"] in division_order else 99
+        ))
+
+        result = {"divisions": divisions}
+        cache_set(cache_key, result)
+        return result
+
+    except Exception as e:
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
+        raise HTTPException(status_code=503, detail=f"MLB API error: {str(e)}")
+
+
+@app.get("/api/mlb/scoreboard")
+def get_mlb_scoreboard(date: Optional[str] = None):
+    if date:
+        try:
+            game_date = datetime.strptime(date, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    else:
+        game_date = datetime.now()
+
+    date_str = game_date.strftime("%Y-%m-%d")
+    is_today = date_str == datetime.now().strftime("%Y-%m-%d")
+    ttl = 2 if is_today else 1440
+    cache_key = f"mlb_scoreboard_{date_str}"
+    cached = cache_get(cache_key, ttl_minutes=ttl)
+    if cached:
+        return cached
+
+    try:
+        data = retry_api_call(lambda: _mlb_get(
+            "/schedule",
+            {"sportId": 1, "date": date_str, "hydrate": "linescore,team"},
+        ))
+
+        games = []
+        for date_entry in data.get("dates", []):
+            for game in date_entry.get("games", []):
+                linescore = game.get("linescore", {})
+                gteams = game.get("teams", {})
+                away = gteams.get("away", {})
+                home = gteams.get("home", {})
+                status = game.get("status", {})
+
+                games.append({
+                    "game_id": game.get("gamePk"),
+                    "status": status.get("detailedState", ""),
+                    "abstract_state": status.get("abstractGameState", ""),
+                    "start_time": game.get("gameDate", ""),
+                    "inning": linescore.get("currentInning"),
+                    "inning_state": linescore.get("inningState", ""),
+                    "away_team_id": away.get("team", {}).get("id"),
+                    "away_abbr": away.get("team", {}).get("abbreviation", ""),
+                    "away_name": away.get("team", {}).get("teamName", ""),
+                    "away_runs": away.get("score"),
+                    "away_record": f"{away.get('leagueRecord', {}).get('wins', 0)}-{away.get('leagueRecord', {}).get('losses', 0)}",
+                    "home_team_id": home.get("team", {}).get("id"),
+                    "home_abbr": home.get("team", {}).get("abbreviation", ""),
+                    "home_name": home.get("team", {}).get("teamName", ""),
+                    "home_runs": home.get("score"),
+                    "home_record": f"{home.get('leagueRecord', {}).get('wins', 0)}-{home.get('leagueRecord', {}).get('losses', 0)}",
+                    "venue": game.get("venue", {}).get("name", ""),
+                })
+
+        result = {"games": games, "date": date_str}
+        cache_set(cache_key, result)
+        return result
+
+    except Exception as e:
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
+        raise HTTPException(status_code=503, detail=f"MLB API error: {str(e)}")
+
+
+@app.get("/api/mlb/leaders")
+def get_mlb_leaders(stat: str = "homeRuns", group: str = "hitting"):
+    cache_key = f"mlb_leaders_{stat}_{group}"
+    cached = cache_get(cache_key, ttl_minutes=60)
+    if cached:
+        return cached
+
+    try:
+        data = retry_api_call(lambda: _mlb_get(
+            "/stats/leaders",
+            {"leaderCategories": stat, "season": _MLB_SEASON, "limit": 10, "sportId": 1,
+             "hydrate": "person,team", "statGroup": group},
+        ))
+
+        leaders_raw = (data.get("leagueLeaders") or [{}])[0]
+        leaders = []
+        for entry in leaders_raw.get("leaders", []):
+            person = entry.get("person", {})
+            team = entry.get("team", {})
+            leaders.append({
+                "rank": entry.get("rank", 0),
+                "player_id": person.get("id"),
+                "player": person.get("fullName", ""),
+                "team": team.get("abbreviation", ""),
+                "team_id": team.get("id"),
+                "value": entry.get("value", ""),
+            })
+
+        result = {"leaders": leaders, "stat": stat}
+        cache_set(cache_key, result)
+        return result
+
+    except Exception as e:
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
+        raise HTTPException(status_code=503, detail=f"MLB API error: {str(e)}")
+
+
+@app.get("/api/mlb/gamelog/{team_id}")
+def get_mlb_team_gamelog(team_id: int):
+    cache_key = f"mlb_gamelog_{team_id}"
+    cached = cache_get(cache_key, ttl_minutes=15)
+    if cached:
+        return cached
+
+    try:
+        start = (datetime.now() - timedelta(days=45)).strftime("%Y-%m-%d")
+        end = datetime.now().strftime("%Y-%m-%d")
+        data = retry_api_call(lambda: _mlb_get(
+            "/schedule",
+            {"sportId": 1, "teamId": team_id, "season": _MLB_SEASON, "gameType": "R",
+             "hydrate": "linescore,team", "startDate": start, "endDate": end},
+        ))
+
+        games = []
+        for date_entry in data.get("dates", []):
+            for game in date_entry.get("games", []):
+                status = game.get("status", {})
+                if status.get("abstractGameState") != "Final":
+                    continue
+                linescore = game.get("linescore", {})
+                gteams = game.get("teams", {})
+                away = gteams.get("away", {})
+                home = gteams.get("home", {})
+
+                is_home = home.get("team", {}).get("id") == team_id
+                our = home if is_home else away
+                opp = away if is_home else home
+                won = our.get("isWinner", False)
+
+                games.append({
+                    "game_id": game.get("gamePk"),
+                    "date": date_entry.get("date", ""),
+                    "opponent_abbr": opp.get("team", {}).get("abbreviation", ""),
+                    "opponent_id": opp.get("team", {}).get("id"),
+                    "is_home": is_home,
+                    "runs_scored": our.get("score", 0),
+                    "runs_allowed": opp.get("score", 0),
+                    "wl": "W" if won else "L",
+                    "innings": linescore.get("currentInning", 9),
+                })
+
+        games.reverse()
+        result = {"games": games[:30]}
+        cache_set(cache_key, result)
+        return result
+
+    except Exception as e:
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
+        raise HTTPException(status_code=503, detail=f"MLB API error: {str(e)}")
