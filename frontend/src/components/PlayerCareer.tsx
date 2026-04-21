@@ -82,12 +82,17 @@ export default function PlayerCareer({ playerId, apiUrl }: PlayerCareerProps) {
     fetch(`${apiUrl}/api/players/${playerId}/career/`)
       .then(res => res.json())
       .then(data => {
+        // resultSets layout from PlayerCareerStats:
+        // [0] SeasonTotalsRegularSeason — one row per season
+        // [1] CareerTotalsRegularSeason — one row, true all-time totals
+        // [2] SeasonTotalsPostSeason    — one row per playoff season
+        // [3] CareerTotalsPostSeason    — one row, career playoff totals
         const regularSeasonData = data.info.resultSets[0];
-        const playoffData = data.info.resultSets[1];
+        const careerTotalsData  = data.info.resultSets[1];
+        const playoffData       = data.info.resultSets[2];
 
         const parseSeasonStats = (rowSet: any[]): SeasonStats[] => {
-          // Filter out the career totals row (last row) from season stats
-          return rowSet.slice(0, -1).map((row: any[]) => ({
+          return rowSet.map((row: any[]) => ({
             seasonId: row[1],
             teamAbbreviation: row[4],
             playerAge: row[5],
@@ -115,8 +120,8 @@ export default function PlayerCareer({ playerId, apiUrl }: PlayerCareerProps) {
           }));
         };
 
-        // Use the last row of regular season data for career totals
-        const totalsRow = regularSeasonData.rowSet[regularSeasonData.rowSet.length - 1];
+        // Career totals come from their own dedicated result set (index 1)
+        const totalsRow = careerTotalsData.rowSet[0];
         const totals: CareerTotals = {
           gp: totalsRow[6],
           gs: totalsRow[7],
