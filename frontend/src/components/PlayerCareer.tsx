@@ -76,6 +76,7 @@ export default function PlayerCareer({ playerId, apiUrl }: PlayerCareerProps) {
   const [loading, setLoading] = useState(true);
   const [showPlayoffs, setShowPlayoffs] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [chartStat, setChartStat] = useState<"pts" | "reb" | "ast" | "stl" | "blk">("pts");
 
   useEffect(() => {
     fetch(`${apiUrl}/api/players/${playerId}/career/`)
@@ -202,9 +203,6 @@ export default function PlayerCareer({ playerId, apiUrl }: PlayerCareerProps) {
     { key: "stl", label: "STL", color: "#a855f7" },
     { key: "blk", label: "BLK", color: "#ef4444" },
   ] as const;
-  type CareerStatKey = (typeof CAREER_STATS)[number]["key"];
-
-  const [chartStat, setChartStat] = useState<CareerStatKey>("pts");
 
   const chartData = careerData.seasonStats.map((s) => ({
     season: s.seasonId.slice(-5),
