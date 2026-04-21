@@ -958,3 +958,234 @@ def get_nfl_scoreboard():
         if stale:
             return stale
         raise HTTPException(status_code=503, detail=f"ESPN API error: {str(e)}")
+
+
+@app.get("/api/nfl/standings")
+def get_nfl_standings():
+    """Divisional standings derived from teams data (no extra API call)."""
+    cache_key = "nfl_standings"
+    cached = cache_get(cache_key, ttl_minutes=60)
+    if cached:
+        return cached
+    try:
+        all_teams = get_nfl_teams()
+        out: dict = {}
+        for team in all_teams:
+            conf = team["conference"]
+            div  = team["division"]
+            out.setdefault(conf, {}).setdefault(div, []).append(team)
+        for conf in out:
+            for div in out[conf]:
+                out[conf][div].sort(key=lambda x: (-x["wins"], x["losses"], x["display_name"]))
+        cache_set(cache_key, out)
+        return out
+    except Exception as e:
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
+        raise HTTPException(status_code=503, detail=f"NFL standings error: {str(e)}")
+
+
+@app.get("/api/nfl/leaders")
+def get_nfl_leaders():
+    cache_key = "nfl_leaders"
+    cached = cache_get(cache_key, ttl_minutes=120)
+    if cached:
+        return cached
+    try:
+        data = retry_api_call(
+            lambda: _espn_get(f"{_NFL_ESPN_BASE}/leaders?seasontype=2")
+        )
+        WANTED = {
+            "passingYards":      "Pass Yards",
+            "rushingYards":      "Rush Yards",
+            "receivingYards":    "Rec Yards",
+            "passingTouchdowns": "Pass TDs",
+            "rushingTouchdowns": "Rush TDs",
+        }
+        out = {}
+        for cat in data.get("leaders", []):
+            name = cat.get("name", "")
+            if name not in WANTED:
+                continue
+            leaders_list = []
+            for entry in cat.get("leaders", [])[:10]:
+                athlete    = entry.get("athlete", {})
+                team       = entry.get("team", {})
+                athlete_id = athlete.get("id", "")
+                leaders_list.append({
+                    "athlete_id":    athlete_id,
+                    "display_name":  athlete.get("displayName", ""),
+                    "headshot":      f"https://a.espncdn.com/i/headshots/nfl/players/full/{athlete_id}.png" if athlete_id else "",
+                    "team_id":       team.get("id", ""),
+                    "team_abbr":     team.get("abbreviation", ""),
+                    "value":         entry.get("value"),
+                    "display_value": entry.get("displayValue", ""),
+                })
+            out[name] = {
+                "name":         name,
+                "display_name": WANTED[name],
+                "leaders":      leaders_list,
+            }
+        cache_set(cache_key, out)
+        return out
+    except Exception as e:
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
+        raise HTTPException(status_code=503, detail=f"ESPN API error: {str(e)}")
+
+
+@app.get("/api/nfl/teams/{team_id}/roster")
+def get_nfl_team_roster(team_id: str):
+    cache_key = f"nfl_roster_{team_id}"
+    cached = cache_get(cache_key, ttl_minutes=360)
+    if cached:
+        return cached
+    try:
+        data = retry_api_call(
+            lambda: _espn_get(f"{_NFL_ESPN_BASE}/teams/{team_id}/roster")
+        )
+        roster = []
+        for group in data.get("athletes", []):
+            position_group = group.get("position", "")
+            for player in group.get("items", []):
+                hs = player.get("headshot", {})
+                headshot = hs.get("href", "") if isinstance(hs, dict) else ""
+                roster.append({
+                    "id":            player.get("id"),
+                    "display_name":  player.get("displayName", ""),
+                    "jersey":        player.get("jersey", ""),
+                    "position":      player.get("position", {}).get("abbreviation", ""),
+                    "position_full": player.get("position", {}).get("displayName", ""),
+                    "position_type": position_group,
+                    "headshot":      headshot,
+                })
+        result = {"team_id": team_id, "roster": roster}
+        cache_set(cache_key, result)
+        return result
+    except Exception as e:
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
+        raise HTTPException(status_code=503, detail=f"ESPN API error: {str(e)}")
+
+
+@app.get("/api/nfl/players")
+def get_nfl_players():
+    """All active NFL players aggregated from 32 team rosters. Cached 12h."""
+    cache_key = "nfl_players_all"
+    cached = cache_get(cache_key, ttl_minutes=720)
+    if cached:
+        return cached
+    try:
+        teams_data = retry_api_call(
+            lambda: _espn_get(f"{_NFL_ESPN_BASE}/teams?limit=32")
+        )
+        raw_teams = teams_data["sports"][0]["leagues"][0]["teams"]
+        all_players: list = []
+        for item in raw_teams:
+            t = item["team"]
+            team_id    = t["id"]
+            team_abbr  = t["abbreviation"]
+            team_name  = t["displayName"]
+            team_color = f"#{t.get('color', '1a1a1a')}"
+            try:
+                roster_data = _espn_get(f"{_NFL_ESPN_BASE}/teams/{team_id}/roster")
+                for group in roster_data.get("athletes", []):
+                    for player in group.get("items", []):
+                        all_players.append({
+                            "id":           player.get("id"),
+                            "display_name": player.get("displayName", ""),
+                            "jersey":       player.get("jersey", ""),
+                            "position":     player.get("position", {}).get("abbreviation", ""),
+                            "team_id":      team_id,
+                            "team_abbr":    team_abbr,
+                            "team_name":    team_name,
+                            "team_color":   team_color,
+                        })
+                time.sleep(0.15)
+            except Exception:
+                continue
+        cache_set(cache_key, all_players)
+        return all_players
+    except Exception as e:
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
+        raise HTTPException(status_code=503, detail=f"ESPN API error: {str(e)}")
+
+
+@app.get("/api/nfl/players/{player_id}")
+def get_nfl_player(player_id: str):
+    cache_key = f"nfl_player_{player_id}"
+    cached = cache_get(cache_key, ttl_minutes=60)
+    if cached:
+        return cached
+    try:
+        bio_data = retry_api_call(
+            lambda: _espn_get(f"{_NFL_ESPN_BASE}/athletes/{player_id}")
+        )
+        athlete  = bio_data.get("athlete", {})
+        team     = athlete.get("team", {})
+        hs       = athlete.get("headshot", {})
+        headshot = hs.get("href", "") if isinstance(hs, dict) else ""
+
+        stat_categories: list = []
+        for season in [2025, 2024]:
+            try:
+                stats_data = _espn_get(
+                    f"https://sports.core.api.espn.com/v2/sports/football/leagues/nfl"
+                    f"/seasons/{season}/types/2/athletes/{player_id}/statistics/0",
+                    timeout=8,
+                )
+                for cat in stats_data.get("splits", {}).get("categories", []):
+                    parsed = [
+                        {
+                            "name":          s.get("name"),
+                            "display_name":  s.get("displayName"),
+                            "value":         s.get("value"),
+                            "display_value": s.get("displayValue"),
+                        }
+                        for s in cat.get("stats", [])
+                        if s.get("value") not in (None, 0, 0.0, "0")
+                    ]
+                    if parsed:
+                        stat_categories.append({
+                            "name":         cat.get("name"),
+                            "display_name": cat.get("displayName", cat.get("name", "")),
+                            "stats":        parsed,
+                            "season":       season,
+                        })
+                if stat_categories:
+                    break
+            except Exception:
+                continue
+
+        result = {
+            "id":              athlete.get("id"),
+            "display_name":    athlete.get("displayName", ""),
+            "first_name":      athlete.get("firstName", ""),
+            "last_name":       athlete.get("lastName", ""),
+            "jersey":          athlete.get("jersey", ""),
+            "position":        athlete.get("position", {}).get("displayName", ""),
+            "position_abbr":   athlete.get("position", {}).get("abbreviation", ""),
+            "height":          athlete.get("displayHeight", ""),
+            "weight":          athlete.get("displayWeight", ""),
+            "age":             athlete.get("age"),
+            "experience":      athlete.get("experience", {}).get("years"),
+            "headshot":        headshot,
+            "team_id":         team.get("id", ""),
+            "team_abbr":       team.get("abbreviation", ""),
+            "team_name":       team.get("displayName", ""),
+            "team_color":      f"#{team.get('color', '1a1a1a')}",
+            "team_logo":       _team_logo(team),
+            "stat_categories": stat_categories,
+        }
+        cache_set(cache_key, result)
+        return result
+    except Exception as e:
+        stale = cache_get_stale(cache_key)
+        if stale:
+            return stale
+        raise HTTPException(status_code=503, detail=f"ESPN API error: {str(e)}")

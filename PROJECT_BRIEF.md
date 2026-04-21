@@ -1,6 +1,6 @@
 # GHP-Index: Sports Statistics Web Application
 
-> **Last Updated:** April 21, 2026
+> **Last Updated:** April 21, 2026 (Session 14)
 > **Project Owner:** Adrian G. (4th Year CS Student)
 > **Purpose:** Portfolio project + skill development
 > **Status:** 🟢 Deployed to Production
@@ -76,6 +76,15 @@ GHP-Index is a web application that aggregates and displays statistics from the 
 - Career stats: season-by-season table, totals/averages, career highs
 - AI projections: EWMA + trend analysis for next-game stats
 
+**NFL Features (branch: `feature/nfl-page`):**
+- Dashboard: Overview (NFL scoreboard + divisional standings + stat leaders), Teams, Players tabs
+- Teams page: AFC/NFC tabs with 2×2 divisional grid — distinct from NBA flat grid
+- Team detail: Overview (quick stats + result cards + upcoming), Game Log (full table), Roster (grouped by position)
+- Player pages: bio (position, jersey, height, weight, age, experience), position-aware season stats
+- Player search: client-side across ~1700 active NFL players (aggregated from all 32 team rosters)
+- Data source: ESPN public API (no auth required) — teams, schedules, rosters, leaders, player stats
+- NFL team colors utility (`nflTeamColors.ts`) for all 32 teams by abbreviation
+
 **UI/UX:**
 - Slate Noir dark theme with custom color palette
 - Skeleton loaders for all data-loading states
@@ -105,8 +114,11 @@ ghp-index/
 │   │   │   │   ├── page.tsx     # NBA teams list (client-side)
 │   │   │   │   ├── teams/[teamId]/page.tsx    # Team detail (client-side)
 │   │   │   │   └── players/[playerId]/page.tsx # Player detail (client-side)
-│   │   │   ├── nfl/page.tsx     # Placeholder
-│   │   │   ├── mlb/page.tsx     # Placeholder
+│   │   │   ├── nfl/
+│   │   │   │   ├── page.tsx                          # Dashboard (Overview/Teams/Players)
+│   │   │   │   ├── teams/[teamId]/page.tsx            # Team detail (Overview/Game Log/Roster)
+│   │   │   │   └── players/[playerId]/page.tsx        # Player detail + stats
+│   │   │   ├── mlb/page.tsx     # In progress (branch: feature/mlb-page)
 │   │   │   └── nhl/page.tsx     # Placeholder
 │   │   ├── components/
 │   │   │   ├── Header.tsx
@@ -195,8 +207,8 @@ ghp-index/
 
 ### Phase 3: Multi-League Expansion
 - [ ] Abstract NBA patterns into reusable components
-- [ ] Add NFL data source and pages
-- [ ] Add MLB data source and pages
+- [x] Add NFL data source and pages (branch: `feature/nfl-page`)
+- [x] Add MLB data source and pages (branch: `feature/mlb-page`)
 - [ ] Add NHL data source and pages
 
 ### Phase 4: AI Features
@@ -244,6 +256,7 @@ ghp-index/
 | Apr 13, 2026 | 11 | Career stats, player comparison |
 | Apr 13, 2026 | 12 | **Production deployment & reliability:** Backend caching with TTL (30-60min), retry logic with exponential backoff, 20s timeouts, stale cache fallback; Frontend converted to CSR with skeleton loaders, error states with retry buttons; Fixed career stats bugs; Deployed to Vercel + Railway |
 | Apr 21, 2026 | 13 | **Enhanced dashboard (branch: `feature/enhanced-dashboard`):** Scoreboard day navigation; player search across all ~4500 players; recent game bar chart + career progression chart (Recharts); projection confidence range bars; team page tabbed layout with Overview stats |
+| Apr 21, 2026 | 14 | **NFL pages (branch: `feature/nfl-page`):** Dashboard with scoreboard + standings + leaders; Teams page with AFC/NFC divisional grid; team detail with Overview/Game Log/Roster tabs; player search + player detail pages with position-aware stats; ESPN public API backend (standings, leaders, rosters, player stats) |
 
 ---
 
